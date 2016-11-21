@@ -49,10 +49,20 @@ stateNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject
 stateNames = as.vector(stateNames$states)
 stateNames = stateNames[-2]
 
-for(i in 1:length(stateNames)) {
-  root = xmlParse(xml2012[i])
-  xmlValue
-}
+library(XML)
+xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", stateNames, ".xml")
+xmlList = lapply(xml2012, xmlParse)
+Obama = lapply(xmlList, function(x){
+  xpathSApply(xmlRoot(x), "//abbr[@title='Democratic']/../../td[@class='results-percentage']", xmlValue)
+})
+Romney = lapply(xmlList, function(x){
+  xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-percentage']", xmlValue)
+})
+
+ObamaVote2008 = unlist(Obama)
+RomneyVote2008 = unlist(Romney)
+countyVotes2012 = data.frame(ObamaVote2008, RomneyVote2008)
+#problems: class of ObamaVote2008, RomneyVote2008 is character and after using unlist function, the two vectors have names for each elements.
 ```
 
 ## Election Results in 2016
