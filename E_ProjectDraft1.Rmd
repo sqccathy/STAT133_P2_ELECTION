@@ -19,7 +19,7 @@ countyVotes2004$State = sapply(names, function(x) x[1])
 
 # County names
 cNames = sapply(names, function(x) x[2])
-# Using regular expressions and string munipulations to clean county names
+# Use regular expressions and string munipulations to clean county names
 # Change & to and in county names
 cNames = gsub("&", "and", cNames)
 # Remove County or Parish from county names
@@ -29,7 +29,7 @@ cNames = gsub("\\.", "", cNames)
 # Convert	all	county names to lower case
 cNames = tolower(cNames)
 # County names after cleaning
-countyVotes2004$ County = cNames
+countyVotes2004$County = cNames
 
 countyVotes2004 = countyVotes2004[,c(4,5,2,3)]
 names(countyVotes2004)[c(3,4)] = c("bushVote2004", "kerryVote2004")
