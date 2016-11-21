@@ -37,7 +37,10 @@ names(countyVotes2004)[c(3,4)] = c("bushVote2004", "kerryVote2004")
 
 ## Election Results in 2008
 ```{r}
-
+countyVotes2008 = read.csv("countyVotes2008.csv")
+countyVotes2008$ObamaVote2008 = countyVotes2008$Obama
+countyVotes2008$McCainVote2008 = countyVotes2008$McCain
+countyVotes2008 = countyVotes2008[,c(1,7,8)]
 ```
 
 ## Election Results in 2012
