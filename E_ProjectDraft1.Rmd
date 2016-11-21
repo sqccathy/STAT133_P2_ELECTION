@@ -1,45 +1,86 @@
 ---
-title: "EProject"
+title: "Election Project"
+Author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+### STEP 1 DATA WRANGLING
+
+## Election Results in 2004
+```{r}
+# Code by Menglu Cao
+countyVotes2004 = read_delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", delim = ' ')
+
+# Split state names and county names
+names = strsplit(countyVotes2004$countyName, split = ",")
+
+# State names
+countyVotes2004$State = sapply(names, function(x) x[1])
+
+# County names
+cNames = sapply(names, function(x) x[2])
+# Using regular expressions and string munipulations to clean county names
+# Change & to and in county names
+cNames = gsub("&", "and", cNames)
+# Remove County or Parish from county names
+cNames = gsub(" County| Parish", "", cNames, ignore.case = TRUE)
+# Eliminate	.	from county names
+cNames = gsub("\\.", "", cNames)
+# Convert	all	county names to lower case
+cNames = tolower(cNames)
+# County names after cleaning
+countyVotes2004$ County = cNames
+
+countyVotes2004 = countyVotes2004[,c(4,5,2,3)]
+names(countyVotes2004)[c(3,4)] = c("bushVote2004", "kerryVote2004")
 ```
 
-
+## Election Results in 2008
 ```{r}
-library(XML)
 
-stateNames <- read.csv("/var/folders/2b/v08_f8150zz3bkjplhchcbyw0000gn/T//RtmpNlwTFO/data20076519a43e", sep="", stringsAsFactors=FALSE)
+```
 
-stateNames <- as.vector(stateNames$states)
-xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/",stateNames,".xml")
+## Election Results in 2012
+```{r}
+stateNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
+stateNames = as.vector(stateNames$states)
+stateNames = stateNames[-2]
 
-electionResutls2012 <- xmlDoc() 
-
-for(i in 1:length(xml2012)) {
+for(i in 1:length(stateNames)) {
   root = xmlParse(xml2012[i])
   xmlValue
 }
 ```
 
-## R Markdown
+## Election Results in 2016
+```{r}
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
+## GML data that contains the latitude and longitude for each county
+```{r} 
+# Code by Menglu Cao
+GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
+doc = xmlRoot(GML)
+cNames = xpathSApply(doc, "/doc/state/county/gml:name", xmlValue)
+cNames = gsub("&", "and", cNames)
+cNames = gsub(" County| Parish", "", cNames, ignore.case = TRUE)
+cNames = gsub("\\.", "", cNames)
+cNames = tolower(cNames)
 
-You can also embed plots, for example:
+Longitude = 
+  xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue)
+Latitude = 
+  xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+GML = data.frame(County = cNames, Latitude, Longitude)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Census data from the 2010 census
+```{r}
+
+```
+
+## Final Merge
+At last, we can merge all of the data into one data frame. 
+
