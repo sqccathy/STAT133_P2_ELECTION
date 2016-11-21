@@ -58,10 +58,16 @@ Obama = lapply(xmlList, function(x){
 Romney = lapply(xmlList, function(x){
   xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-percentage']", xmlValue)
 })
+County = lapply(xmlList, function(x){
+  xpathSApply(xmlRoot(x), "/table/tbody/tr/th[ @class='results-county']", xmlValue)
+})
 
 ObamaVote2008 = unlist(Obama)
 RomneyVote2008 = unlist(Romney)
-countyVotes2012 = data.frame(ObamaVote2008, RomneyVote2008)
+County = unlist(County)
+County = gsub(" 100.0% Reporting", "", County)
+countyVotes2012 = data.frame(County, ObamaVote2008, RomneyVote2008)
+
 #problems: class of ObamaVote2008, RomneyVote2008 is character and after using unlist function, the two vectors have names for each elements.
 ```
 
