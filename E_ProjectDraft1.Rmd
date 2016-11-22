@@ -20,14 +20,17 @@ countyVotes2004$State = sapply(names, function(x) x[1])
 # County names
 cNames = sapply(names, function(x) x[2])
 # Use regular expressions and string munipulations to clean county names
-# Change & to and in county names
-cNames = gsub("&", "and", cNames)
-# Remove County or Parish from county names
-cNames = gsub(" County| Parish", "", cNames, ignore.case = TRUE)
-# Eliminate	.	from county names
-cNames = gsub("\\.", "", cNames)
 # Convert	all	county names to lower case
 cNames = tolower(cNames)
+# Remove blanks in county names
+cNames = gsub(" ", "", cNames)
+# Change & to and in county names
+cNames = gsub("&", "and", cNames)
+# Remove county or parish from county names
+cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+# Eliminate	.	from county names
+cNames = gsub("\\.", "", cNames)
+
 # County names after cleaning
 countyVotes2004$County = cNames
 
@@ -81,18 +84,18 @@ countyVotes2012 = data.frame(County, ObamaVote2008, RomneyVote2008)
 # Code by Menglu Cao
 GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
 doc = xmlRoot(GML)
-cNames = xpathSApply(doc, "/doc/state/county/gml:name", xmlValue)
-cNames = gsub("&", "and", cNames)
-cNames = gsub(" County| Parish", "", cNames, ignore.case = TRUE)
-cNames = gsub("\\.", "", cNames)
+cNames = as.character(xpathSApply(doc, "/doc/state/county/gml:name", xmlValue))
 cNames = tolower(cNames)
+cNames = gsub(" ", "", cNames)
+cNames = gsub("&", "and", cNames)
+cNames = gsub("county|parish", "", cNames)
+cNames = gsub("\\.", "", cNames)
+cNames = gsub("\n", "", cNames)
 
-Longitude = 
-  xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue)
-Latitude = 
-  xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue)
+Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue))
+Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue))
 
-GML = data.frame(County = cNames, Latitude, Longitude)
+GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
 ```
 
 ## Census data from the 2010 census
