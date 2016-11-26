@@ -115,7 +115,13 @@ DP02 <- read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census201
 DP03 <- read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
 
 censusDataFrame <- merge(x = B01003, y = DP02, z = DP03)
-  #I'll clean up the column headings tomorrow morning. 
+
+cNames = as.character(censusDataFrame$GEO.display.label)
+cNames = gsub(" ", "", cNames) 
+cNames = gsub("&", "and", cNames) 
+cNames = gsub("county|parish", "", cNames) 
+cNames = gsub("\\.", "", cNames)
+cNames = tolower(cNames)  
 ```
 
 ## Final Merge
