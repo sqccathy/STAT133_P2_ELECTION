@@ -111,39 +111,49 @@ GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
 #Code by John Towey
 
 B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
-cNames$B01003 = as.character(B01003$GEO.display.label)
-cNames$B01003 = gsub(" ", "", cNames) 
-cNames$B01003 = gsub("&", "and", cNames) 
-cNames$B01003 = gsub("county|parish", "", cNames) 
-cNames$B01003 = gsub("\\.", "", cNames)
-cNames$B01003 = tolower(cNames) 
 
-totalPop$B01003 = B01003$HD01_VD01 #1 Total population
+# TOTAL POPULATION 
+totalPop = B01003$HD01_VD01 #1 Total population
 
 DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
-cNames$DP02 = as.character(DP02$GEO.display.label)
-cNames$DP02 = gsub(" ", "", cNames) 
-cNames$DP02 = gsub("&", "and", cNames) 
-cNames$DP02 = gsub("county|parish", "", cNames) 
-cNames$DP02 = gsub("\\.", "", cNames)
-cNames$DP02 = tolower(cNames) 
 
-familiesWithKids$DP02 = DP02$HC03_VC06 #2 Percent of households that are families with Children under 18
-singleDads$DP02 = DP02$HC03_VC10 #3 Percent households with a single male head of household with children under 18
-singleMoms$DP02 = DP02$HC03_VC12 #4 Percent of households with a single female head of household with children under 18
-seniorsLivingAlone$DP02 = DP02$HC03_VC15 #5 Housholder living alone, 65 years old or over
+# FAMILY STRUCTURE 
+familiesWithKids = DP02$HC03_VC06 #2 Percent of households that are families with Children under 18
+singleDads = DP02$HC03_VC10 #3 Percent households with a single male head of household with children under 18
+singleMoms = DP02$HC03_VC12 #4 Percent of households with a single female head of household with children under 18
+seniorsLivingAlone = DP02$HC03_VC15 #5 Housholder living alone, 65 years old or over
 
 DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
-cNames$DP03 = as.character(DP02$GEO.display.label)
-cNames$DP03 = gsub(" ", "", cNames) 
-cNames$DP03 = gsub("&", "and", cNames) 
-cNames$DP03 = gsub("county|parish", "", cNames) 
-cNames$DP03 = gsub("\\.", "", cNames)
-cNames$DP03 = tolower(cNames)
 
+# EMPLOYMENT
+laborForce = DP03$HC03_VC06 #6 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+unemployed = DP03$HC03_VC08 #7 Unemployment Rate (percent over 16 unemployed)
+femaleLaborForce = DP03$HC03_VC17 #8 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+employedWomen = DP03$HC03_VC18 #9 Women over 16 who are employed 
+femaleUnemployment = femaleLaborForce - employedWomen #10 Female Unemployment Rate
+
+# EMPLOYMENT BY OCCUPATIONS
+occManagement = DP03$HC03_VC41 #11 Pecent of the civilian labor force employed in management, business, science, and arts occupations
+occService = DP03$HC03_VC42 #12 Percent of the civilian labor force employed in service occupations 
+
+# EMPLOYMENT BY INDUSTRY
+extractiveIndustries = DP03$HC03_VC50 #13 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+constructionInustry = DP03$HC03_VC51 #14 Percent of the civilian labor force employed in the construction industry
+manufacturingIndustry = DP03$HC03_VC52 #15 Percent of the civilian labor force employed in the manufacturing industry
+retailIndustry = DP03$HC03_VC54 #16 Percent of the civilian labor force employed in the retail trade industry
+professionalIndustries = DP03$HC03_VC58 #17 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
+
+# MERGE
 censusDataFrame = merge(x = B01003, y = DP02, z = DP03, all = TRUE)
 
-#I am going to keep woring on this tomorow morning 
+cNamesD3 = as.character(censusDataFrame$GEO.display.label)
+cNamesD3 = gsub(" ", "", cNames) 
+cNamesD3 = gsub("&", "and", cNames) 
+cNamesD3 = gsub("county|parish", "", cNames) 
+cNamesD3 = gsub("\\.", "", cNames)
+cNamesD3 = tolower(cNames)
+
+#Still needs more work. I'll get to it asap...
 ```
 
 ## Final Merge
