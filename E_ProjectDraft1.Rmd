@@ -146,12 +146,12 @@ professionalIndustries = DP03$HC03_VC58 #17 Percent of the civilian labor force 
 # MERGE
 censusDataFrame = merge(x = B01003, y = DP02, z = DP03, all = TRUE)
 
-cNamesD3 = as.character(censusDataFrame$GEO.display.label)
-cNamesD3 = gsub(" ", "", cNames) 
-cNamesD3 = gsub("&", "and", cNames) 
-cNamesD3 = gsub("county|parish", "", cNames) 
-cNamesD3 = gsub("\\.", "", cNames)
-cNamesD3 = tolower(cNames)
+cNames = as.character(censusDataFrame$GEO.display.label)
+cNames = gsub(" ", "", cNames) 
+cNames = gsub("&", "and", cNames) 
+cNames = gsub("county|parish", "", cNames) 
+cNames = gsub("\\.", "", cNames)
+cNames = tolower(cNames)
 
 #Still needs more work. I'll get to it asap...
 ```
