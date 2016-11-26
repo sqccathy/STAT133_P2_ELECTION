@@ -108,7 +108,14 @@ GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
 
 ## Census data from the 2010 census
 ```{r}
+#Code by John Towey
 
+B01003 <- read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
+DP02 <- read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+DP03 <- read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
+
+censusDataFrame <- merge(x = B01003, y = DP02, z = DP03)
+  #I'll clean up the column headings tomorrow morning. 
 ```
 
 ## Final Merge
