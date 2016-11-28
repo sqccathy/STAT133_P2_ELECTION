@@ -148,7 +148,8 @@ whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label",
 # MERGE INDIVIDUAL POPULATION DATA FILES
 
 populationData = merge(x = totalPopFrame, y = whitePopFrame, 
-                       by = c("GEO.id2", "GEO.display.label")) 
+                       by = c("GEO.id2", "GEO.display.label"),
+                       all = TRUE)
 
 # GENERATE PERCENT WHITE VARIABLE
 ## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
@@ -186,7 +187,8 @@ familyData = familyData[ , c(1:2, 10:16)]
 # MERGE FAMILY DATA WITH POPULATION DATA
 
 famPopData = merge(x = populationData, y = familyData, 
-                   by = c("GEO.id2", "GEO.display.label"))
+                   by = c("GEO.id2", "GEO.display.label"),
+                   all = TRUE)
 
 
 # EMPLOYMENT DATA
@@ -234,7 +236,8 @@ employmentData = employmentData[ , c(1:2, 14:25)]
 # MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
 
 censusData = merge(x = famPopData, y = employmentData, 
-                   by = c("GEO.id2", "GEO.display.label"))
+                   by = c("GEO.id2", "GEO.display.label"),
+                   all = TRUE) 
 
 # REMOVE UNNEEDED OBJECTS
 
@@ -243,17 +246,19 @@ remove(B01003, DP02, DP03,
        populationData, familyData, 
        famPopData, employmentData)
 
+censusData = censusData[censusData$GEO.id2 < 72001, ] # This removes the observations for Puerto Rico, which does not report election results by municipality in the provided data.
+
 # CREATE cNames
 
 censusData$cNames = as.character(censusData$GEO.display.label)
-censusData$cNames = gsub(" ", "", censusData$cNames) 
-censusData$cNames = gsub("&", "and", censusData$cNames) 
-censusData$cNames = gsub("county|parish", "", censusData$cNames) 
-censusData$cNames = gsub("\\.", "", censusData$cNames)
+censusData$cNames = gsub("&", "and", censusData$cNames)
+censusData$cNames = gsub("\\-", "", censusData$cNames)
+censusData$cNames = gsub(" ", "", censusData$cNames)
 censusData$cNames = tolower(censusData$cNames)
-censusData = censusData[ , -2]
+censusData$cNames = gsub("county|parish|censusarea|borough|municipality", "", censusData$cNames)
+  # Makes county names uniform across data sets
 
-#Still needs more work. I got the dataframe worked out, now I jsut need to add a few more last variables.
+# fips code is in GEO.id2 and I still need to add a few more last variables.
 ```
 
 ## Final Merge
