@@ -32,7 +32,7 @@ cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
 cNames = gsub("\\.", "", cNames)
 
 # County names after cleaning
-countyVotes2004$County = cNames
+countyVotes2004$County = paste0(cNames, ".", countyVotes2004$State)
 
 countyVotes2004 = countyVotes2004[,c(4,5,2,3)]
 names(countyVotes2004)[c(3,4)] = c("bushVote2004", "kerryVote2004")
