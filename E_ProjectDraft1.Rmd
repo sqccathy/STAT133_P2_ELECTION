@@ -1,6 +1,6 @@
 ---
 title: "Election Project"
-Author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey
+Author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey, Victor Choi
 output: html_document
 ---
 
@@ -84,7 +84,20 @@ countyVotes2012 = data.frame(County, ObamaVote2008, RomneyVote2008)
 
 ## Election Results in 2016
 ```{r}
+# Code by Victor Choi
 
+data2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
+
+cNames = data2016$county_name
+cNames = tolower(cNames)
+cNames = gsub(" ", "", cNames)
+cNames = gsub("&", "and", cNames)
+cNames = gsub("county|parish", "", cNames)
+cNames = gsub("\\.", "", cNames)
+
+data2016$county_name = cNames
+names(data2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
+data2016 = data2016[, c(9, 2, 3)]
 ```
 
 ## GML data that contains the latitude and longitude for each county
