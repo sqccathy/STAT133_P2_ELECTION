@@ -73,8 +73,8 @@ County = lapply(xmlList, function(x){
   xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
 })
 
-ObamaVote2008 = unlist(Obama)
-RomneyVote2008 = unlist(Romney)
+ObamaVote2012 = unlist(Obama)
+RomneyVote2012 = unlist(Romney)
 cNames = unlist(cNames)
 cNames = tolower(cNames)
 cNames = gsub("% reporting", "", cNames)
@@ -83,10 +83,10 @@ cNames = gsub(" ", "", cNames)
 cNames = gsub("[0-9]", "", cNames)
 stateNames = gsub("-", "", stateNames)
 cNames = paste0(cNames, ",", rep(stateNames, sapply(Obama, length)))
-countyVotes2012 = data.frame(ObamaVote2008, RomneyVote2008)
+countyVotes2012 = data.frame(ObamaVote2012, RomneyVote2012)
 countyVotes2012$County = cNames
 
-#problems: class of ObamaVote2008, RomneyVote2008 is character.
+#problems: class of ObamaVote2012, RomneyVote2012 is character.
 ```
 
 ## Election Results in 2016
