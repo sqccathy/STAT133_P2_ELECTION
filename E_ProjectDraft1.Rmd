@@ -110,68 +110,137 @@ GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
 ```{r}
 # CODE BY JOHN TOWEY
 
+
+# POPULATION DATA
+
 B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
 
 # TOTAL POPULATION
 
-totalPop = B01003$HD01_VD01 #1 Total population
+totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
+                       c("GEO.id2", "GEO.display.label", 
+                         "HD01_VD01")] #Frame to extract total population
+totalPopFrame$totalPop = totalPopFrame$HD01_VD01 #1 Generate total population variable
+totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
+                                   "totalPop")] # Subset to exclude HD01_VD01
 
-DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+# WHITE POPULATION
+
+whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
+                       c("GEO.id2", "GEO.display.label", "HD01_VD01")] # Frame to extract white population
+whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
+whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
+                                   "whitePop")] # Subset to exclude HD01_VD01
+
+# MERGE INDIVIDUAL POPULATION DATA FILES
+
+populationData = merge(x = totalPopFrame, y = whitePopFrame, 
+                       by = c("GEO.id2", "GEO.display.label")) 
+
+# GENERATE PERCENT WHITE VARIABLE
+## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
+
+populationData$percentWhite = 
+  100*(populationData$whitePop/populationData$totalPop) #3 White population as a percent of total population
+
 
 # FAMILY STRUCTURE
 
-familiesWithKids = DP02$HC03_VC06 #2 Percent of households that are families with Children under 18
-singleDads = DP02$HC03_VC10 #3 Percent households with a single male head of household with children under 18
-singleMoms = DP02$HC03_VC12 #4 Percent of households with a single female head of household with children under 18
-seniorsLivingAlone = DP02$HC03_VC15 #5 Housholder living alone, 65 years old or over
+DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+
+# FRAME CONSTRUCTION
+
+familyData = DP02[ , c("GEO.id2", "GEO.display.label",
+                       "HC03_VC06", "HC03_VC10", 
+                       "HC03_VC12", "HC03_VC15",
+                       "HC01_VC21", "HC03_VC36", 
+                       "HC03_VC37")]
+
+# VARIABLES
+
+familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families with own hildren under 18
+familyData$singleDads = DP02$HC03_VC10 #5 Percent households with a single male head of household with own children under 18
+familyData$singleMoms = DP02$HC03_VC12 #6 Percent of households with a single female head of household with own children under 18
+familyData$seniorsLivingAlone = DP02$HC03_VC15 #7 Housholder living alone, 65 years old or over
+familyData$avgFamilySize = DP02$HC01_VC21 #8 Average size of families
+familyData$neverMarriedMen = DP02$HC03_VC36 #9 Percent of males 15 and older who have never married (not inc. divorced or separated)
+familyData$marriedMen = DP02$HC03_VC37 #10 Percent of males 15 and older who are married (currently married, not inc. separated)
+
+# SUBSET DATA FRAME 
+
+familyData = familyData[ , c(1:2, 10:16)]
+
+# MERGE FAMILY DATA WITH POPULATION DATA
+
+famPopData = merge(x = populationData, y = familyData, 
+                   by = c("GEO.id2", "GEO.display.label"))
+
+
+# EMPLOYMENT DATA
 
 DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
 
-# EMPLOYMENT 
+# FRAME CONSTRUCTION
 
-laborForce = DP03$HC03_VC06 #6 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
-unemployed = DP03$HC03_VC08 #7 Unemployment Rate (percent over 16 unemployed)
-femaleLaborForce = DP03$HC03_VC17 #8 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
-employedWomen = DP03$HC03_VC18 #9 Women over 16 who are employed 
-femaleUnemployment = femaleLaborForce - employedWomen #10 Female Unemployment Rate
+employmentData = DP03[ , c("GEO.id2", "GEO.display.label",
+                           "HC03_VC06", "HC03_VC08", 
+                           "HC03_VC17", "HC03_VC18",
+                           "HC03_VC41", "HC03_VC42", 
+                           "HC03_VC50", "HC03_VC51",
+                           "HC03_VC52", "HC03_VC54",
+                           "HC03_VC58")]
+
+# VARIABLES
+
+# GENERAL EMPLOYMENT
+
+employmentData$laborForce = DP03$HC03_VC06 #11 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+employmentData$unemployed = DP03$HC03_VC08 #12 Unemployment Rate (percent over 16 unemployed)
+employmentData$femaleLaborForce = DP03$HC03_VC17 #13 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+employmentData$employedWomen = DP03$HC03_VC18 #14 Women over 16 who are employed 
+employmentData$femaleUnemployment = 
+  (employmentData$femaleLaborForce - employmentData$employedWomen) #15 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
 
 # EMPLOYMENT BY OCCUPATION 
 
-occManagement = DP03$HC03_VC41 #11 Pecent of the civilian labor force employed in management, business, science, and arts occupations
-occService = DP03$HC03_VC42 #12 Percent of the civilian labor force employed in service occupations 
+employmentData$occManagement = DP03$HC03_VC41 #16 Pecent of the civilian labor force employed in management, business, science, and arts occupations
+employmentData$occService = DP03$HC03_VC42 #17 Percent of the civilian labor force employed in service occupations 
 
 # EMPLOYMENT BY INDUSTRY
 
-extractiveIndustries = DP03$HC03_VC50 #13 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
-constructionIndustry = DP03$HC03_VC51 #14 Percent of the civilian labor force employed in the construction industry
-manufacturingIndustry = DP03$HC03_VC52 #15 Percent of the civilian labor force employed in the manufacturing industry
-retailIndustry = DP03$HC03_VC54 #16 Percent of the civilian labor force employed in the retail trade industry
-professionalIndustries = DP03$HC03_VC58 #17 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
+employmentData$extractiveIndustries = DP03$HC03_VC50 #18 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+employmentData$constructionIndustry = DP03$HC03_VC51 #19 Percent of the civilian labor force employed in the construction industry
+employmentData$manufacturingIndustry = DP03$HC03_VC52 #20 Percent of the civilian labor force employed in the manufacturing industry
+employmentData$retailIndustry = DP03$HC03_VC54 #21 Percent of the civilian labor force employed in the retail trade industry
+employmentData$professionalIndustries = DP03$HC03_VC58 #22 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
 
-# MERGE INDIVIDUAL DATA FILES
+# SUBSET DATA FRAME
 
-mergedData = merge(x = B01003, y = DP02, z = DP03, all = FALSE)
+employmentData = employmentData[ , c(1:2, 14:25)]
+
+# MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
+
+censusData = merge(x = famPopData, y = employmentData, 
+                   by = c("GEO.id2", "GEO.display.label"))
+
+# REMOVE UNNEEDED OBJECTS
+
+remove(B01003, DP02, DP03, 
+       totalPopFrame, whitePopFrame,
+       populationData, familyData, 
+       famPopData, employmentData)
 
 # CREATE cNames
 
-cNames = as.character(B01003$GEO.display.label)
-cNames = gsub(" ", "", cNames) 
-cNames = gsub("&", "and", cNames) 
-cNames = gsub("county|parish", "", cNames) 
-cNames = gsub("\\.", "", cNames)
-cNames = tolower(cNames)
+censusData$cNames = as.character(censusData$GEO.display.label)
+censusData$cNames = gsub(" ", "", censusData$cNames) 
+censusData$cNames = gsub("&", "and", censusData$cNames) 
+censusData$cNames = gsub("county|parish", "", censusData$cNames) 
+censusData$cNames = gsub("\\.", "", censusData$cNames)
+censusData$cNames = tolower(censusData$cNames)
+censusData = censusData[ , -2]
 
-# CREATE LIST WITH VARIABLES OF INTEREST 
-
-censusVariablesList = list(cNames, totalPop, familiesWithKids, 
-                      singleDads, singleMoms, seniorsLivingAlone, 
-                      laborForce, unemployed, femaleLaborForce, 
-                      employedWomen, femaleUnemployment, occManagement,
-                      occService, extractiveIndustries, 
-                      constructionIndustry, manufacturingIndustry,
-                      retailIndustry, professionalIndustries)
-
-#Still needs more work. I am having trouble making these into a data frame, but I can do a list, at least. 
+#Still needs more work. I got the dataframe worked out, now I jsut need to add a few more last variables.
 ```
 
 ## Final Merge
