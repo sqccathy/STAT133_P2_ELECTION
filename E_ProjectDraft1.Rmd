@@ -88,7 +88,7 @@ countyVotes2012 = data.frame(County, ObamaVote2008, RomneyVote2008)
 
 data2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
 
-cNames = data2016$county_name
+cNames = paste(data2016$state_abbr, data2016$county_name, sep = "")
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("&", "and", cNames)
@@ -97,7 +97,7 @@ cNames = gsub("\\.", "", cNames)
 
 data2016$county_name = cNames
 names(data2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
-data2016 = data2016[, c(9, 2, 3)]
+data2016 = data2016[, c(10, 2, 3)]
 ```
 
 ## GML data that contains the latitude and longitude for each county
