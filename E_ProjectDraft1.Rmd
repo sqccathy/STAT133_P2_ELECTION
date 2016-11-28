@@ -70,7 +70,7 @@ Romney = lapply(xmlList, function(x){
   xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-percentage']", xmlValue)
 })
 County = lapply(xmlList, function(x){
-  xpathSApply(xmlRoot(x), "/table/tbody/tr/th[ @class='results-county']", xmlValue)
+  xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
 })
 
 ObamaVote2008 = unlist(Obama)
