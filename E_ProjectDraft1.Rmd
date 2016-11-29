@@ -9,6 +9,7 @@ output: html_document
 ## Election Results in 2004
 ```{r}
 # Code by Menglu Cao
+require(readr)
 countyVotes2004 = read_delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", delim = ' ')
 
 # Split state names and county names
@@ -16,6 +17,8 @@ names = strsplit(countyVotes2004$countyName, split = ",")
 
 # State names
 countyVotes2004$State = sapply(names, function(x) x[1])
+# Remove blanks in state names
+countyVotes2004$State = gsub(" ", "", countyVotes2004$State)
 
 # County names
 cNames = sapply(names, function(x) x[2])
@@ -31,11 +34,11 @@ cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
 # Eliminate	.	from county names
 cNames = gsub("\\.", "", cNames)
 
-# County names after cleaning
-countyVotes2004$County = paste0(cNames, ".", countyVotes2004$State)
+# Paste county names and state names together so the county names are unique
+countyVotes2004$County = paste0(cNames, ",", countyVotes2004$State)
 
-countyVotes2004 = countyVotes2004[,c(4,5,2,3)]
-names(countyVotes2004)[c(3,4)] = c("bushVote2004", "kerryVote2004")
+countyVotes2004 = countyVotes2004[,c(5,2,3)]
+names(countyVotes2004)[c(2,3)] = c("bushVote2004", "kerryVote2004")
 ```
 
 ## Election Results in 2008
@@ -124,6 +127,7 @@ data2016 = data2016[, c(10, 2, 3)]
 # Code by Menglu Cao
 GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
 doc = xmlRoot(GML)
+# County names
 cNames = as.character(xpathSApply(doc, "/doc/state/county/gml:name", xmlValue))
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
@@ -132,7 +136,17 @@ cNames = gsub("county|parish", "", cNames)
 cNames = gsub("\\.", "", cNames)
 cNames = gsub("\n", "", cNames)
 
+#State names
+sNames = as.character(xpathSApply(doc, "/doc/state/gml:name", xmlValue))
+sNames = tolower(sNames)
+sNames = gsub(" ", "", sNames)
+sNames = gsub("\n", "", sNames)
+
+# Paste county names and state names together so the county names are unique
+cNames = paste0(cNames, ",", sNames)
+
 Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue))
+
 Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue))
 
 GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
