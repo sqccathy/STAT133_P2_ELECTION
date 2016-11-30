@@ -44,7 +44,25 @@ names(countyVotes2004)[c(2,3)] = c("bushVote2004", "kerryVote2004")
 ## Election Results in 2008
 ```{r}
 # Code by Qichen Sun
-countyVotes2008 = read.csv("countyVotes2008.csv")
+library(xlsx)
+wb <- loadWorkbook("countyVotes2008.xlsx")
+sheets <- getSheets(wb) 
+snames = names(sheets)
+#get state names
+snames = snames[-1]
+#import xlsx file into a list
+list = lapply(seq(2,51),function(x) read.xlsx("countyVotes2008.xlsx", x, header=FALSE)[-1,])
+#repeat state names to match the county names
+num_of_row = sapply(list,nrow)
+snames = rep(snames,num_of_row)
+cnames = unlist(sapply(list,function(x) x[[1]]))
+Obama = unlist(sapply(list,function(x) x[[4]]))
+McCain = unlist(sapply(list,function(x) x[[5]]))
+countyVotes2008 = data.frame(State=snames,County = cnames,
+                             obamaVote2008=Obama,McCainVote2008 = McCain)
+##countyVotes2008 = read.csv("countyVotes2008.csv")
+##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
+##countyVotes2008 = countyVotes2008[,c(1,2,5,6)]
 cNames = countyVotes2008$County
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
@@ -52,12 +70,10 @@ cNames = gsub("&", "and", cNames)
 cNames = gsub("county|parish", "", cNames)
 cNames = gsub("\\.", "", cNames)
 countyVotes2008$County = cNames
-names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
-countyVotes2008 = countyVotes2008[,c(1,2,5,6)]
 
 #add a column to merge
 snames = tolower(gsub(" ","",countyVotes2008$State))
-countyVotes2008$County = paste(countyVotes2008$County,",",snames,sep="")
+countyVotes2008$County = paste(tolower(countyVotes2008$County),",",snames,sep="")
 ```
 
 ## Election Results in 2012
