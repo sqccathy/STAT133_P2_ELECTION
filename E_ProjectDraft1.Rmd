@@ -54,6 +54,10 @@ cNames = gsub("\\.", "", cNames)
 countyVotes2008$County = cNames
 names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
 countyVotes2008 = countyVotes2008[,c(1,2,5,6)]
+
+#add a column to merge
+snames = tolower(gsub(" ","",countyVotes2008$State))
+countyVotes2008$County = paste(countyVotes2008$County,",",snames,sep="")
 ```
 
 ## Election Results in 2012
