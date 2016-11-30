@@ -133,16 +133,26 @@ countyVotes2012$County = cNames
 
 data2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
 
-cNames = paste(data2016$state_abbr, data2016$county_name, sep = "")
+#We clean the county name data, to change all the county names to lower case, remove spaces, remove & symbols, remove periods, remove county or parish.
+
+cNames = data2016$county_name
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("&", "and", cNames)
 cNames = gsub("county|parish", "", cNames)
 cNames = gsub("\\.", "", cNames)
 
+#We paste the state abbreviations before the county names, as there are counties with the same name throughout states
+cNames = paste(data2016$state_abbr, cNames, sep = "")
 data2016$county_name = cNames
 names(data2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
-data2016 = data2016[, c(10, 2, 3)]
+
+#We add the fips number of each county, in order to merge with census data
+data2016 = data2016[, c(10, 2, 3, 11)]
+
+#Due to Alaska's voting system not based on counties, but instead based on the popular vote to decide where electorals place their votes, each county in Alaska reports the total number of votes in Alaska. Thus, we have decided to leave Alaska out of the maps, as the data for burough-level voting is missing.
+
+data2016 = data2016[-(seq(1, 29, by=1)), ]
 ```
 
 ## GML data that contains the latitude and longitude for each county
