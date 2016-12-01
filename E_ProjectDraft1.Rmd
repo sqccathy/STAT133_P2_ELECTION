@@ -22,7 +22,7 @@ countyVotes2004$State = gsub(" ", "", countyVotes2004$State)
 
 # County names
 cNames = sapply(names, function(x) x[2])
-# Use regular expressions and string munipulations to clean county names
+# Apply regular expressions and string munipulations to county names
 # Convert	all	county names to lower case
 cNames = tolower(cNames)
 # Remove blanks in county names
@@ -34,30 +34,73 @@ cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
 # Eliminate	.	from county names
 cNames = gsub("\\.", "", cNames)
 
-# Paste county names and state names together so the county names are unique
+# Paste county and state names together so county names are unique
 countyVotes2004$County = paste0(cNames, ",", countyVotes2004$State)
 
-countyVotes2004 = countyVotes2004[,c(5,2,3)]
+# Subset countyVotes2004, such that it has 3 variables: county names, number of votes for Bush and Kerry
+countyVotes2004 = countyVotes2004[,c(5, 2, 3)]
 names(countyVotes2004)[c(2,3)] = c("bushVote2004", "kerryVote2004")
+
+# Scrape data of votes in Virginia from HTML tables
+require(XML)
+require(RCurl)
+wikiURL = "https://en.wikipedia.org/wiki/United_States_presidential_election_in_Virginia,_2004"
+pageContents = getURLContent(wikiURL)
+
+# Set	up XPath to find the table
+pDoc = htmlParse(pageContents)
+pRoot = xmlRoot(pDoc)
+cTable = getNodeSet(pRoot, 
+          "//table/tr/td/a[@title='Accomack County, Virginia']/../../..")
+nrows = xmlSize(cTable[[1]])
+
+# Extract	Values into	Character	Matrix
+tableChar = do.call(rbind, sapply(1:nrows, function(i) {
+                strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
+
+# Names of counties in Virginia
+cNames = tableChar[-1, 1]
+
+# Apply regular expressions and string munipulations to county names
+cNames = tolower(cNames)
+cNames = gsub(" ", "", cNames)
+cNames = gsub("&", "and", cNames)
+cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+cNames = gsub("\\.", "", cNames)
+
+# Paste county names and state name, i.e., virginia, for uniqueness
+cNames = paste0(cNames, ",virginia")
+
+# Number of votes for Bush & Kerry
+bushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
+kerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
+
+# Create a data frame for Virginia
+Virginia2004 = data.frame(County = cNames, bushVote2004, kerryVote2004)
+
+# Add data of votes in Virginia to countyVotes2004
+countyVotes2004 = rbind(countyVotes2004, Virginia2004)
 ```
 
 ## Election Results in 2008
 ```{r}
 # Code by Qichen Sun
 library(xlsx)
-wb <- loadWorkbook("countyVotes2008.xlsx")
-sheets <- getSheets(wb) 
+wb = loadWorkbook("countyVotes2008.xlsx")
+sheets = getSheets(wb)
+
+#Get state names
 sNames = names(sheets)
-#get state names
-sNames = sNames[-1]
-#import xlsx file into a list
-list = lapply(seq(2,51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1,])
+sNames = tolower(gsub(" ", "", sNames))[-1]
 
-#repeat state names to match the county names
-num_of_row = sapply(list, nrow)
-sNames = rep(sNames, num_of_row)
-sNames = tolower(gsub(" ", "", sNames))
+#Import xlsx file into a list
+list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1,])
 
+#Repeat state names to match the county names
+num_of_county = sapply(list, nrow)
+sNames = rep(sNames, num_of_county)
+
+# 
 cNames = unlist(sapply(list, function(x) x[[1]]))
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
@@ -131,11 +174,11 @@ countyVotes2012$County = cNames
 ```{r}
 # Code by Victor Choi
 
-data2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
+countyVotes2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
 
 #We clean the county name data, to change all the county names to lower case, remove spaces, remove & symbols, remove periods, remove county or parish.
 
-cNames = data2016$county_name
+cNames = countyVotes2016$county_name
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("&", "and", cNames)
@@ -143,16 +186,16 @@ cNames = gsub("county|parish", "", cNames)
 cNames = gsub("\\.", "", cNames)
 
 #We paste the state abbreviations before the county names, as there are counties with the same name throughout states
-cNames = paste(data2016$state_abbr, cNames, sep = "")
-data2016$county_name = cNames
-names(data2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
+cNames = paste(countyVotes2016$state_abbr, cNames, sep = "")
+countyVotes2016$county_name = cNames
+names(countyVotes2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
 
 #We add the fips number of each county, in order to merge with census data
-data2016 = data2016[, c(10, 2, 3, 11)]
+countyVotes2016 = countyVotes2016[, c(10, 2, 3, 11)]
 
 #Due to Alaska's voting system not based on counties, but instead based on the popular vote to decide where electorals place their votes, each county in Alaska reports the total number of votes in Alaska. Thus, we have decided to leave Alaska out of the maps, as the data for burough-level voting is missing.
 
-data2016 = data2016[-(seq(1, 29, by=1)), ]
+countyVotes2016 = countyVotes2016[-(seq(1, 29, by=1)), ]
 ```
 
 ## GML data that contains the latitude and longitude for each county
@@ -161,7 +204,7 @@ data2016 = data2016[-(seq(1, 29, by=1)), ]
 GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
 doc = xmlRoot(GML)
 # County names
-cNames = as.character(xpathSApply(doc, "/doc/state/county/gml:name", xmlValue))
+cNames = as.character(xpathSApply(doc, "//county/gml:name", xmlValue))
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("&", "and", cNames)
@@ -169,11 +212,16 @@ cNames = gsub("county|parish", "", cNames)
 cNames = gsub("\\.", "", cNames)
 cNames = gsub("\n", "", cNames)
 
-#State names
-sNames = as.character(xpathSApply(doc, "/doc/state/gml:name", xmlValue))
+# State names
+sNames = as.character(xpathSApply(doc, "//state/gml:name", xmlValue))
 sNames = tolower(sNames)
 sNames = gsub(" ", "", sNames)
 sNames = gsub("\n", "", sNames)
+
+# Get the number of counties in each state
+num_of_county = xpathSApply(doc, "//state", xmlSize) - 1
+
+sNames = rep(sNames, num_of_county)
 
 # Paste county names and state names together so the county names are unique
 cNames = paste0(cNames, ",", sNames)
@@ -329,4 +377,6 @@ censusData$cNames = gsub("county|parish|censusarea|borough|municipality", "", ce
 
 ## Final Merge
 At last, we can merge all of the data into one data frame. 
+```{r}
 
+```
