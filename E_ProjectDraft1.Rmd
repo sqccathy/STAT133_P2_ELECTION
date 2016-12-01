@@ -38,8 +38,8 @@ cNames = gsub("\\.", "", cNames)
 countyVotes2004$County = paste0(cNames, ",", countyVotes2004$State)
 
 # Subset countyVotes2004, such that it has 3 variables: county names, number of votes for Bush and Kerry
-countyVotes2004 = countyVotes2004[,c(5, 2, 3)]
-names(countyVotes2004)[c(2,3)] = c("bushVote2004", "kerryVote2004")
+countyVotes2004 = countyVotes2004[, c(5, 2, 3)]
+names(countyVotes2004)[c(2, 3)] = c("bushVote2004", "kerryVote2004")
 
 # Scrape data of votes in Virginia from HTML tables
 require(XML)
@@ -89,19 +89,23 @@ library(xlsx)
 wb = loadWorkbook("countyVotes2008.xlsx")
 sheets = getSheets(wb)
 
-#Get state names
+# Get state names
 sNames = names(sheets)
+
+# Apply regular expressions and string munipulations to state names
 sNames = tolower(gsub(" ", "", sNames))[-1]
 
-#Import xlsx file into a list
-list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1,])
+# Import xlsx file into a list
+list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
 
-#Repeat state names to match the county names
+# Repeat state names to match the county names
 num_of_county = sapply(list, nrow)
 sNames = rep(sNames, num_of_county)
 
-# 
+# Get county names
 cNames = unlist(sapply(list, function(x) x[[1]]))
+
+# Apply regular expressions and string munipulations to county names
 cNames = tolower(cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("&", "and", cNames)
@@ -125,17 +129,18 @@ countyVotes2008 = data.frame(County, obamaVote2008 = Obama, McCainVote2008 = McC
 ## Election Results in 2012
 ```{r}
 # Code by Jieni Wan
-# Convert stateNames to a vector.
+# Get state names
 stateNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
 stateNames = as.vector(stateNames$states)
 stateNames = stateNames[-2]
 
-library(XML)
-# Create a vector consisting of all the websites we are going to use by pasting.
+# Create a vector consisting of all the websites we are going to use
 xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", stateNames, ".xml")
-# For each website, use xmlParse function to read the xml file and then get a list.
+
+# Get a list of the xml file of each website
 xmlList = lapply(xml2012, xmlParse)
-# For each xml file, extract the information we want, i.e. the votes for Obama and Romney and also the county names.
+
+# Extract the desired information from each xml file, i.e., the number of votes for Obama and Romney, together with the county names
 Obama = lapply(xmlList, function(x){
   xpathSApply(xmlRoot(x), "//abbr[@title='Democratic']/../../td[@class='results-popular']", xmlValue)
 })
@@ -146,28 +151,24 @@ cNames = lapply(xmlList, function(x){
   xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
 })
 
-# Convert the lists obtained to vectors.
-ObamaVote2012 = unlist(Obama)
-ObamaVote2012 = gsub(" ", "", ObamaVote2012)
-ObamaVote2012 = as.numeric(gsub(",", "", ObamaVote2012))
-
-RomneyVote2012 = unlist(Romney)
-RomneyVote2012 = gsub(" ", "", RomneyVote2012)
-RomneyVote2012 = as.numeric(gsub(",", "", RomneyVote2012))
-
+# Convert the lists to numeric vectors
+ObamaVote2012 = as.numeric(gsub("[, ]", "", unlist(Obama)))
+RomneyVote2012 = as.numeric(gsub("[, ]", "", unlist(Romney)))
 cNames = unlist(cNames)
-# Revise the format of the county names.
+
+# Revise the format of the county names for merging
 cNames = tolower(cNames)
 cNames = gsub("% reporting", "", cNames)
 cNames = gsub("\\.", "", cNames)
 cNames = gsub(" ", "", cNames)
 cNames = gsub("[0-9]", "", cNames)
 stateNames = gsub("-", "", stateNames)
-# Paste the county names with the state names corresponding to the counties. 
+
+# Paste county names with state names corresponding to the counties
 cNames = paste0(cNames, ",", rep(stateNames, sapply(Obama, length)))
-# Create a data frame with three columns, County, ObamaVote2012 and RomneyVote2012
-countyVotes2012 = data.frame(ObamaVote2012, RomneyVote2012)
-countyVotes2012$County = cNames
+
+# Create a data frame with three columns, namely County, ObamaVote2012 and RomneyVote2012
+countyVotes2012 = data.frame(County = cNames, ObamaVote2012, RomneyVote2012)
 ```
 
 ## Election Results in 2016
