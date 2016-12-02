@@ -559,6 +559,10 @@ At last, we can merge all of the data into one data frame.
 
 ## REFERENCES
 
+Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
+  Tabular Data. R package version 1.0.0.
+  https://CRAN.R-project.org/package=readr
+
 R Core Team (2016). R: A language and environment for statistical
   computing. R Foundation for Statistical Computing, Vienna, Austria. URL
   https://www.R-project.org/.
