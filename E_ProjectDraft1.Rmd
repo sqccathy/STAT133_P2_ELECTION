@@ -6,7 +6,6 @@ output: html_document
 
 ### STEP 1: DATA WRANGLING
 
-Due to Alaska's voting system not based on counties, but instead based on the popular vote to decide where electorals place their votes, each county in Alaska reports the total number of votes in Alaska. Thus, we have decided to leave Alaska out of the maps, as the data for borough-level voting is missing
 ## Election Results in 2004
 ```{r}
 # Code by Menglu Cao
@@ -100,7 +99,7 @@ if(createSource1) {
 ## Election Results in 2008
 ```{r}
 # Code by Qichen Sun
-createSource2 = T
+createSource2 = F
 if(createSource2) {
   library(xlsx)
   wb = loadWorkbook("countyVotes2008.xlsx")
@@ -145,30 +144,34 @@ if(createSource2) {
   ##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
   ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
   
-  # EDA of the data
+  # EDA of number of votes for Obama
   summary(countyVotes2008$obamaVote2008)
-  #  summary result is as follows
   #     Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
   #      8    1799    4473   21110   12190 1939000       1 
   
-  # I checked where the NA is, and if the min 8 is reasonable.
+  # Check which county's number of votes for Obama is not available 
   countyVotes2008[which(is.na(countyVotes2008$obamaVote2008)), ]
-
   #                          County       State obamaVote2008
   # 1454 updated:11/10/20083:28pmet mississippi            NA
   #      McCainVote2008
   # 1454             NA
   
-  # There is one row of irrelevant information in Mississipi. Thus I dropped it from the data frame.
+  # There is one row of irrelevant information in Mississipi. Drop it from the data frame.
   countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$obamaVote2008), ]
   
-  # Check the minimum
+  # Check if the minimum is reasonable
   countyVotes2008[which(countyVotes2008$obamaVote2008 == 8), ]
   
   #      County State obamaVote2008 McCainVote2008
   # 2629   king texas             8            151
+  # The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Thus the minimum being 8 makes sense.
   
-  # The min occurs in king, texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Thus the minimum being 8 makes sense.
+  # Check if the maximum is reasonable
+  countyVotes2008[which(countyVotes2008$obamaVote2008 == max(countyVotes2008$obamaVote2008)), ]
+  #        County      State obamaVote2008 McCainVote2008
+  #177 losangeles california       1938744         826512
+  
+  # The max occurs in Los Angeles, California. According to Wikipedia, the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the maximum being 1938744 makes sense.
   
   # Summary statistics of number of votes for McCain
   summary(countyVotes2008$McCainVote2008)
@@ -333,7 +336,7 @@ ggplot(data = GML_df) +
 ```{r}
 # CODE BY JOHN TOWEY
 
-createSource6 = T
+createSource6 = F
 if(createSource6) {
   
   # POPULATION DATA
@@ -450,32 +453,37 @@ if(createSource6) {
                      by = c("GEO.id2", "GEO.display.label"),
                      all = TRUE)
   
+  # APPLY REGULAR EXPRESSION AND STRING MANIPULATION TO STATE & COUNTY NAMES
+  cNames = as.character(censusData$GEO.display.label)
+  cNames = gsub("[- ]", "", cNames)
+  cNames = gsub("<", "", cNames)
+  cNames = gsub(">", "", cNames)
+  cNames = tolower(cNames)
+  cNames = gsub("county|parish", "", cNames)
+  cNames = gsub("&", "and", cNames)
+  
   # SPLIT STATE NAMES AND COUNTY NAMES
-  censusData$GEO.display.label = as.character(censusData$GEO.display.label)
-  names = strsplit(as.character(censusData$GEO.display.label), split = ", ")
+
+  names = strsplit(cNames, split = ",")
+  
+  # COUNTY NAMES
+  cNames = sapply(names, function(x) x[1])
+
+  # ADD COUNTY NAMES TO THE DATA FRAME  
+  censusData$County = cNames
   
   # STATE NAMES
   sNames = sapply(names, function(x) x[2])
   
-  # APPLY REGULAR EXPRESSION AND STRING MANIPULATION TO STATE NAMES
-  sNames = gsub(" ", "", sNames)
-  sNames = tolower(sNames)
-  
   # ADD STATE NAMES TO THE DATA FRAME
   censusData$State = sNames
   
-  # COUNTY NAMES
-  cNames = sapply(cNames, function(x) x[1])
+  names(censusData)[1] = "FIPS"
+  censusData = censusData[, -2]
   
-  # APPLY REGULAR EXPRESSION AND STRING MANIPULATION TO COUNTY NAMES
-  cNames = gsub("&", "and", cNames)
-  cNames = gsub("-", "", cNames)
-  cNames = gsub(" ", "", cNames)
-  cNames = tolower(cNames)
-  cNames = gsub("county|parish", "", cNames)
-
-  # ADD COUNTY NAMES TO THE DATA FRAME  
-  censusData$County = cNames
+  # Drop the counties in Alaska or Hawaii.
+  censusData = censusData[censusData$State != "alaska" &
+                          censusData$State != "hawaii", ]
   
   save(censusData, file = "censusData.rda")
 } else {
@@ -486,6 +494,6 @@ if(createSource6) {
 ## Final Merge
 At last, we can merge all of the data into one data frame. 
 ```{r}
- censusData = censusData[censusData$GEO.id2 < 72001, ] # This removes the observations for Puerto Rico, which does not report election results by municipality in the provided data.
+
 ```
 
