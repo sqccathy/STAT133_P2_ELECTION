@@ -396,9 +396,10 @@ ggplot(data = GML_df) +
   The plot looks right, which means we have properly cleaned the data.
   
 ## Census data from the 2010 census (BY JOHN TOWEY)
-  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population from the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Uisng the total population and the count of white indidividuals, we derive a percentage of population that is white in each county. 
+  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population from the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive a percentage of population that is white in each county. 
   We then extract data from the second file on family structures within counties. We look at families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
   Then we extract employment data, including labor force participation and unemployent rates, female labor force partiipation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
+  After we extract the variabels, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
 ```{r eval = createCensus}
   # POPULATION DATA
   
