@@ -234,6 +234,40 @@ if(createSource3) {
 } else {
   load("countyVotes2012.rda")
 }
+
+  # EDA of the data
+  # Summary statistics of number of votes for Obama
+  summary(countyVotes2012$ObamaVote2012)
+  #  Min.  1st Qu.  Median  Mean   3rd Qu. Max.
+  #   5    1552     3945    19860  11090   1672000 
+  
+  # NA does not exist, but the minimum is 5 and the maximum is 1672000, which may be unreasonable.
+  
+  # Check the minimum and the maximum to see if they are acceptable.
+  countyVotes2012[which(countyVotes2012$ObamaVote2012 == 5), ]
+  
+  #        ObamaVote2012   RomneyVote2012     County
+  # 2628          5            139          king,texas
+  
+  countyVotes2012[which(countyVotes2012$ObamaVote2012 == max(countyVotes2012$ObamaVote2012)), ]
+  
+  #        ObamaVote2012   RomneyVote2012        County
+  # 176       1672164         699600        losangeles,california 
+  
+  # The min occurs in king, texas and the max occurs in losangeles, california, which are acceptable due to the similar reasons mentioned above. 
+  
+  # Summary statistics of number of votes for Romney
+  summary(countyVotes2012$RomneyVote2012)
+  # Min.  1st Qu.  Median  Mean   3rd Qu.  Max. 
+  # 54    2889     6383    18800  15950    699600 
+  
+  # Only need to check the minimum.
+  countyVotes2012[which(countyVotes2012$RomneyVote2012 == 54), ]
+  
+  #        ObamaVote2012   RomneyVote2012    County
+  #  2644         9             54          loving,texas
+  
+  # The min occurs in loving, texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in Texas. Thus the minimum being 54 makes sense.
 ```
 
 ## Election Results in 2016
