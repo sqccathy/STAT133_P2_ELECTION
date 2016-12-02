@@ -6,401 +6,486 @@ output: html_document
 
 ### STEP 1: DATA WRANGLING
 
+Due to Alaska's voting system not based on counties, but instead based on the popular vote to decide where electorals place their votes, each county in Alaska reports the total number of votes in Alaska. Thus, we have decided to leave Alaska out of the maps, as the data for borough-level voting is missing
 ## Election Results in 2004
 ```{r}
 # Code by Menglu Cao
-require(readr)
-countyVotes2004 = read_delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", delim = ' ')
-
-# Split state names and county names
-names = strsplit(countyVotes2004$countyName, split = ",")
-
-# State names
-countyVotes2004$State = sapply(names, function(x) x[1])
-# Remove blanks in state names
-countyVotes2004$State = gsub(" ", "", countyVotes2004$State)
-
-# County names
-cNames = sapply(names, function(x) x[2])
-# Apply regular expressions and string munipulations to county names
-# Convert	all	county names to lower case
-cNames = tolower(cNames)
-# Remove blanks in county names
-cNames = gsub(" ", "", cNames)
-# Change & to and in county names
-cNames = gsub("&", "and", cNames)
-# Remove county or parish from county names
-cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
-# Eliminate	.	from county names
-cNames = gsub("\\.", "", cNames)
-
-# Paste county and state names together so county names are unique
-countyVotes2004$County = paste0(cNames, ",", countyVotes2004$State)
-
-# Subset countyVotes2004, such that it has 3 variables: county names, number of votes for Bush and Kerry
-countyVotes2004 = countyVotes2004[, c(5, 2, 3)]
-names(countyVotes2004)[c(2, 3)] = c("bushVote2004", "kerryVote2004")
-
-# Scrape data of votes in Virginia from HTML tables
-require(XML)
-require(RCurl)
-wikiURL = "https://en.wikipedia.org/wiki/United_States_presidential_election_in_Virginia,_2004"
-pageContents = getURLContent(wikiURL)
-
-# Set	up XPath to find the table
-pDoc = htmlParse(pageContents)
-pRoot = xmlRoot(pDoc)
-cTable = getNodeSet(pRoot, 
-          "//table/tr/td/a[@title='Accomack County, Virginia']/../../..")
-nrows = xmlSize(cTable[[1]])
-
-# Extract	Values into	Character	Matrix
-tableChar = do.call(rbind, sapply(1:nrows, function(i) {
-                strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
-
-# Names of counties in Virginia
-cNames = tableChar[-1, 1]
-
-# Apply regular expressions and string munipulations to county names
-cNames = tolower(cNames)
-cNames = gsub(" ", "", cNames)
-cNames = gsub("&", "and", cNames)
-cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
-cNames = gsub("\\.", "", cNames)
-
-# Paste county names and state name, i.e., virginia, for uniqueness
-cNames = paste0(cNames, ",virginia")
-
-# Number of votes for Bush & Kerry
-bushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
-kerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
-
-# Create a data frame for Virginia
-Virginia2004 = data.frame(County = cNames, bushVote2004, kerryVote2004)
-
-# Add data of votes in Virginia to countyVotes2004
-countyVotes2004 = rbind(countyVotes2004, Virginia2004)
+createSource1 = F
+if(createSource1) {
+  require(readr)
+  countyVotes2004 = read_delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", delim = ' ')
+  
+  # Split state names and county names
+  names = strsplit(countyVotes2004$countyName, split = ",")
+  
+  # State names
+  sNames = sapply(names, function(x) x[1])
+  
+  # Remove blanks in state names
+  sNames = gsub(" ", "", sNames)
+  
+  # Add State names to the data frame
+  countyVotes2004$State = sNames
+  
+  # County names
+  cNames = sapply(names, function(x) x[2])
+  
+  # Apply regular expressions and string munipulations to county names
+  # Convert	all	county names to lower case
+  cNames = tolower(cNames)
+  # Remove blanks in county names
+  cNames = gsub(" ", "", cNames)
+  # Change & to and in county names
+  cNames = gsub("&", "and", cNames)
+  # Remove county or parish from county names
+  cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+  # Eliminate	.	from county names
+  cNames = gsub("\\.", "", cNames)
+  
+  # Add county names to the data frame
+  countyVotes2004$County = cNames
+  
+  # Subset countyVotes2004, such that it consists of 4 variables: county names, state names, number of votes for Bush and Kerry
+  countyVotes2004 = countyVotes2004[, c(5, 4, 2, 3)]
+  
+  # Change variable names in the data frame
+  names(countyVotes2004)[c(3, 4)] = c("bushVote2004", "kerryVote2004")
+  
+  # Scrape data of votes in Virginia from HTML tables
+  require(XML)
+  require(RCurl)
+  wikiURL = "https://en.wikipedia.org/wiki/United_States_presidential_election_in_Virginia,_2004"
+  pageContents = getURLContent(wikiURL)
+  
+  # Set up XPath to find the table
+  pDoc = htmlParse(pageContents)
+  pRoot = xmlRoot(pDoc)
+  cTable = getNodeSet(pRoot, 
+            "//table/tr/td/a[@title='Accomack County, Virginia']/../../..")
+  nrows = xmlSize(cTable[[1]])
+  
+  # Extract Values into	Character	Matrix
+  tableChar = do.call(rbind, sapply(1:nrows, function(i) {
+                  strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
+  
+  # Names of counties in Virginia
+  cNames = tableChar[-1, 1]
+  
+  # Apply regular expressions and string munipulations to county names
+  cNames = tolower(cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = gsub("&", "and", cNames)
+  cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+  cNames = gsub("\\.", "", cNames)
+  
+  # Create a character vector consisting of "virginia"
+  sNames = rep("virginia", length(cNames))
+  
+  # Number of votes for Bush & Kerry
+  bushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
+  kerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
+  
+  # Create a data frame for Virginia
+  Virginia2004 = data.frame(County = cNames, State = sNames, bushVote2004, kerryVote2004)
+  
+  # Add data of votes in Virginia to countyVotes2004
+  countyVotes2004 = rbind(countyVotes2004, Virginia2004)
+  
+  save(countyVotes2004, file = "countyVotes2004.rda")
+} else {
+  load("countyVotes2004.rda")
+}
 ```
 
 ## Election Results in 2008
 ```{r}
 # Code by Qichen Sun
-library(xlsx)
-wb = loadWorkbook("countyVotes2008.xlsx")
-sheets = getSheets(wb)
+createSource2 = T
+if(createSource2) {
+  library(xlsx)
+  wb = loadWorkbook("countyVotes2008.xlsx")
+  sheets = getSheets(wb)
+  
+  # Get state names
+  sNames = names(sheets)
+  
+  # Apply regular expressions and string munipulations to state names
+  sNames = tolower(gsub(" ", "", sNames))[-1]
+  
+  # Import xlsx file into a list
+  list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
+  
+  # Repeat state names to match the county names
+  num_of_county = sapply(list, nrow)
+  sNames = rep(sNames, num_of_county)
+  
+  # Get county names
+  cNames = unlist(sapply(list, function(x) x[[1]]))
+  
+  # Apply regular expressions and string munipulations to county names
+  cNames = tolower(cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = gsub("&", "and", cNames)
+  cNames = gsub("county|parish", "", cNames)
+  cNames = gsub("\\.", "", cNames)
+  
+  Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
+  
+  McCain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
+  
+  countyVotes2008 = data.frame(County = cNames, State = sNames, obamaVote2008 = Obama, McCainVote2008 = McCain)
+  
+  # Check if there is any county belonging to Hawaii or Alaska. If so, drop these counties
+  if(any(countyVotes2008$State == "hawaii" | countyVotes2008$State == "alaska")) {
+    countyVotes2008 = countyVotes2008[countyVotes2008$State != "hawaii" &
+                                      countyVotes2008$State != "alaska", ]
+  }
+  
+  ##countyVotes2008 = read.csv("countyVotes2008.csv")
+  ##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
+  ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
+  
+  # EDA of the data
+  summary(countyVotes2008$obamaVote2008)
+  #  summary result is as follows
+  #     Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+  #      8    1799    4473   21110   12190 1939000       1 
+  
+  # I checked where the NA is, and if the min 8 is reasonable.
+  countyVotes2008[which(is.na(countyVotes2008$obamaVote2008)), ]
 
-# Get state names
-sNames = names(sheets)
-
-# Apply regular expressions and string munipulations to state names
-sNames = tolower(gsub(" ", "", sNames))[-1]
-
-# Import xlsx file into a list
-list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
-
-# Repeat state names to match the county names
-num_of_county = sapply(list, nrow)
-sNames = rep(sNames, num_of_county)
-
-# Get county names
-cNames = unlist(sapply(list, function(x) x[[1]]))
-
-# Apply regular expressions and string munipulations to county names
-cNames = tolower(cNames)
-cNames = gsub(" ", "", cNames)
-cNames = gsub("&", "and", cNames)
-cNames = gsub("county|parish", "", cNames)
-cNames = gsub("\\.", "", cNames)
-
-Obama = unlist(sapply(list, function(x) x[[4]]))
-
-McCain = unlist(sapply(list, function(x) x[[5]]))
-
-# Paste county names and state names together so the county names are unique
-County = paste0(cNames, ",", sNames)
-
-countyVotes2008 = data.frame(County, obamaVote2008 = as.numeric(as.character(Obama)), McCainVote2008 =as.numeric(as.character(McCain)))
-
-##countyVotes2008 = read.csv("countyVotes2008.csv")
-##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
-##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
-
-#EDA for the data
-summary(countyVotes2008$obamaVote2008)
-#  summary result is as follows
-#     Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-#      8    1799    4473   21110   12190 1939000       1 
-
-#so I check where is the NA,and if the min 8 is reasonable.
-countyVotes2008[which(is.na(countyVotes2008$obamaVote2008)),]
-#The NA happens in mississippi         County obamaVote2008 McCainVote2008
-#1454 updated:11/10/20083:28pmet,mississippi            NA             NA
-
-countyVotes2008[which(countyVotes2008$obamaVote2008==8),]
-#The min happens in king,texas      County obamaVote2008 McCainVote2008
-#                      2629 king,texas             8            151
-
-#It turns out the mississippi has one row of unrelavent information.So I delete it. For the king in Texas, I checked it on wikipidia, and it makes sense.
-countyVotes2008 = countyVotes2008[-1454,]
-
-#same for McCain
-summary(countyVotes2008$McCainVote2008)
-#it makes sense
+  #                          County       State obamaVote2008
+  # 1454 updated:11/10/20083:28pmet mississippi            NA
+  #      McCainVote2008
+  # 1454             NA
+  
+  # There is one row of irrelevant information in Mississipi. Thus I dropped it from the data frame.
+  countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$obamaVote2008), ]
+  
+  # Check the minimum
+  countyVotes2008[which(countyVotes2008$obamaVote2008 == 8), ]
+  
+  #      County State obamaVote2008 McCainVote2008
+  # 2629   king texas             8            151
+  
+  # The min occurs in king, texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Thus the minimum being 8 makes sense.
+  
+  # Summary statistics of number of votes for McCain
+  summary(countyVotes2008$McCainVote2008)
+  # It makes sense
+  save(countyVotes2008, file = "countyVotes2008.rda")
+} else {
+  load("countyVotes2008.rda")
+}
 ```
 
 ## Election Results in 2012
 ```{r}
 # Code by Jieni Wan
-# Get state names
-library(XML)
-stateNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
-stateNames = as.vector(stateNames$states)
-stateNames = stateNames[-2]
-
-# Create a vector consisting of all the websites we are going to use
-xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", stateNames, ".xml")
-
-# Get a list of the xml file of each website
-xmlList = lapply(xml2012, xmlParse)
-
-# Extract the desired information from each xml file, i.e., the number of votes for Obama and Romney, together with the county names
-Obama = lapply(xmlList, function(x){
-  xpathSApply(xmlRoot(x), "//abbr[@title='Democratic']/../../td[@class='results-popular']", xmlValue)
-})
-Romney = lapply(xmlList, function(x){
-  xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-popular']", xmlValue)
-})
-cNames = lapply(xmlList, function(x){
-  xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
-})
-
-# Convert the lists to numeric vectors
-ObamaVote2012 = as.numeric(gsub("[, ]", "", unlist(Obama)))
-RomneyVote2012 = as.numeric(gsub("[, ]", "", unlist(Romney)))
-cNames = unlist(cNames)
-
-# Revise the format of the county names for merging
-cNames = tolower(cNames)
-cNames = gsub("% reporting", "", cNames)
-cNames = gsub("\\.", "", cNames)
-cNames = gsub(" ", "", cNames)
-cNames = gsub("[0-9]", "", cNames)
-stateNames = gsub("-", "", stateNames)
-
-# Paste county names with state names corresponding to the counties
-cNames = paste0(cNames, ",", rep(stateNames, sapply(Obama, length)))
-
-# Create a data frame with three columns, namely County, ObamaVote2012 and RomneyVote2012
-countyVotes2012 = data.frame(County = cNames, ObamaVote2012, RomneyVote2012)
+createSource3 = F
+if(createSource3) {
+  # Get state names
+  sNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
+  sNames = as.vector(sNames$states)
+  
+  # Drop hawaii and alaska from stateNames since we have decided to skip them
+  sNames = sNames[sNames != "hawaii" & sNames != "alaska"]
+  
+  # Create a vector consisting of all the websites we are going to use
+  xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", sNames, ".xml")
+  
+  # Get a list of the xml file of each website
+  xmlList = lapply(xml2012, xmlParse)
+  
+  # Extract the desired information from each xml file, i.e., the number of votes for Obama and Romney, together with the county names
+  Obama = lapply(xmlList, function(x){
+    xpathSApply(xmlRoot(x), "//abbr[@title='Democratic']/../../td[@class='results-popular']", xmlValue)
+  })
+  Romney = lapply(xmlList, function(x){
+    xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-popular']", xmlValue)
+  })
+  cNames = lapply(xmlList, function(x){
+    xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
+  })
+  
+  # Convert the lists to numeric vectors
+  ObamaVote2012 = as.numeric(gsub("[, ]", "", unlist(Obama)))
+  RomneyVote2012 = as.numeric(gsub("[, ]", "", unlist(Romney)))
+  cNames = unlist(cNames)
+  
+  # Revise the format of the county and state names for merging
+  cNames = tolower(cNames)
+  cNames = gsub("% reporting", "", cNames)
+  cNames = gsub("\\.", "", cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = gsub("[0-9]", "", cNames)
+  sNames = gsub("-", "", sNames)
+  
+  # Repeat state names to match county names
+  sNames = rep(sNames, sapply(Obama, length))
+  
+  # Create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012
+  countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, RomneyVote2012)
+  
+  save(countyVotes2012, file = "countyVotes2012.rda")
+} else {
+  load("countyVotes2012.rda")
+}
 ```
 
 ## Election Results in 2016
 ```{r}
 # Code by Victor Choi
+createSource4 = F
+if(createSource4) {
+  countyVotes2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
+  
+  # Drop Alaska and Hawaii from the data frame
+  countyVotes2016 = countyVotes2016[countyVotes2016$state_abbr != "AK" &
+                                    countyVotes2016$state_abbr != "HI", ]
+  
+  # We change all the county names to lower case, remove spaces, substitute & for and, remove periods, remove county or parish
+  countyVotes2016$county_name = tolower(countyVotes2016$county_name)
+  countyVotes2016$county_name = gsub(" ", "", countyVotes2016$county_name)
+  countyVotes2016$county_name = gsub("&", "and", countyVotes2016$county_name)
+  countyVotes2016$county_name = gsub("county|parish", "", countyVotes2016$county_name)
+  countyVotes2016$county_name = gsub("\\.", "", countyVotes2016$county_name)
+  
+  # We keep the FIPS, in order to merge with other data sources; we also keep numbers of votes for Clinton and Trump
+  countyVotes2016 = countyVotes2016[, c(11, 2, 3)]
+  
+  names(countyVotes2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
 
-countyVotes2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
-
-#We clean the county name data, to change all the county names to lower case, remove spaces, remove & symbols, remove periods, remove county or parish.
-
-cNames = countyVotes2016$county_name
-cNames = tolower(cNames)
-cNames = gsub(" ", "", cNames)
-cNames = gsub("&", "and", cNames)
-cNames = gsub("county|parish", "", cNames)
-cNames = gsub("\\.", "", cNames)
-
-#We paste the state abbreviations before the county names, as there are counties with the same name throughout states
-cNames = paste(countyVotes2016$state_abbr, cNames, sep = "")
-countyVotes2016$county_name = cNames
-names(countyVotes2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
-
-#We add the fips number of each county, in order to merge with census data
-countyVotes2016 = countyVotes2016[, c(10, 2, 3, 11)]
-
-#Due to Alaska's voting system not based on counties, but instead based on the popular vote to decide where electorals place their votes, each county in Alaska reports the total number of votes in Alaska. Thus, we have decided to leave Alaska out of the maps, as the data for burough-level voting is missing.
-
-countyVotes2016 = countyVotes2016[-(seq(1, 29, by=1)), ]
+  save(countyVotes2016, file = "countyVotes2016.rda")
+} else {
+  load("countyVotes2016.rda")
+}
 ```
 
 ## GML data that contains the latitude and longitude for each county
+
+  The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing three variables in this data frame, namely the county names, the latitude and longitude for each county.
+  
 ```{r} 
 # Code by Menglu Cao
-GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
-doc = xmlRoot(GML)
-# County names
-cNames = as.character(xpathSApply(doc, "//county/gml:name", xmlValue))
-cNames = tolower(cNames)
-cNames = gsub(" ", "", cNames)
-cNames = gsub("&", "and", cNames)
-cNames = gsub("county|parish", "", cNames)
-cNames = gsub("\\.", "", cNames)
-cNames = gsub("\n", "", cNames)
+createSource5 = F
+if(createSource5) {
+  require(XML)
+  GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
+  doc = xmlRoot(GML)
+  # County names
+  cNames = as.character(xpathSApply(doc, "//county/gml:name", xmlValue))
+  cNames = tolower(cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = gsub("&", "and", cNames)
+  cNames = gsub("county|parish", "", cNames)
+  cNames = gsub("\\.", "", cNames)
+  cNames = gsub("\n", "", cNames)
+  
+  # State names
+  sNames = as.character(xpathSApply(doc, "//state/gml:name", xmlValue))
+  sNames = tolower(sNames)
+  sNames = gsub(" ", "", sNames)
+  sNames = gsub("\n", "", sNames)
+  
+  # Get the number of counties in each state
+  num_of_county = xpathSApply(doc, "//state", xmlSize) - 1
+  
+  # Repeat state names so that they correspond to counties
+  sNames = rep(sNames, num_of_county)
+  
+  # Get the longitude and latitude of counties
+  Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue))
+  
+  Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue))
+  
+  # Create a data frame which contain the county names, the correspondent state names, and the latitude and longitude for each county
+  GML_df = data.frame(County = cNames, State = sNames, Latitude, Longitude, stringsAsFactors = FALSE)
 
-# State names
-sNames = as.character(xpathSApply(doc, "//state/gml:name", xmlValue))
-sNames = tolower(sNames)
-sNames = gsub(" ", "", sNames)
-sNames = gsub("\n", "", sNames)
-
-# Get the number of counties in each state
-num_of_county = xpathSApply(doc, "//state", xmlSize) - 1
-
-sNames = rep(sNames, num_of_county)
-
-# Paste county names and state names together so the county names are unique
-cNames = paste0(cNames, ",", sNames)
-
-Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue))
-
-Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue))
-
-GML_df = data.frame(cNames, Latitude, Longitude, stringsAsFactors = FALSE)
+  # Since we have decided that we won't look into Hawaii or Alaska, we will have to make sure that we drop the counties in Hawaii or Alaska. We will first check if there is any county belonging to Hawaii or Alaska.
+  if(any(GML_df$State == "hawaii" | GML_df$State == "alaska")) {
+    GML_df = GML_df[GML_df$State != "hawaii" & GML_df$State != "alaska", ]
+  }
+  
+  # Save the intermediate file for efficiency consideration
+  save(GML_df, file = "GML.rda")
+} else {
+  load("GML.rda")
+}
 ```
 
+  We'll then plot the counties by their coordinates to see if the result looks like the map of United States yet without Alaska and Hawaii.
+```{r}
+# Code by Menglu Cao
+require(ggplot2)
+ggplot(data = GML_df) +
+  geom_point(mapping = aes(x = Longitude, y = Latitude, size = 0.2, alpha = 0.5)) +
+  scale_x_continuous(name = "Longitude") +
+  scale_y_continuous(name = "Latitude") +
+  labs(title = "Map of counties in the United States") +
+  theme_bw()
+```
+
+  According to the plot above, it is safe to say that the map looks right, which means we have properly cleaned the data.
+  
+  
 ## Census data from the 2010 census
 ```{r}
 # CODE BY JOHN TOWEY
 
+createSource6 = T
+if(createSource6) {
+  
+  # POPULATION DATA
+  
+  B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
+  
+  # TOTAL POPULATION
+  
+  totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
+                         c("GEO.id2", "GEO.display.label", 
+                           "HD01_VD01")] #Frame to extract total population
+  totalPopFrame$totalPop = totalPopFrame$HD01_VD01 #1 Generate total population variable
+  totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
+                                     "totalPop")] # Subset to exclude HD01_VD01
+  
+  # WHITE POPULATION
+  
+  whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
+                         c("GEO.id2", "GEO.display.label", "HD01_VD01")] # Frame to extract white population
+  whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
+  whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
+                                     "whitePop")] # Subset to exclude HD01_VD01
+  
+  # MERGE INDIVIDUAL POPULATION DATA FILES
+  
+  populationData = merge(x = totalPopFrame, y = whitePopFrame, 
+                         by = c("GEO.id2", "GEO.display.label"),
+                         all = TRUE)
+  
+  # GENERATE PERCENT WHITE VARIABLE
+  ## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
+  
+  populationData$percentWhite = 
+    100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population
+  
+  # FAMILY STRUCTURE
+  
+  DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+  
+  # FRAME CONSTRUCTION
+  
+  familyData = DP02[ , c("GEO.id2", "GEO.display.label",
+                         "HC03_VC06", "HC03_VC10", 
+                         "HC03_VC12", "HC03_VC15",
+                         "HC01_VC21", "HC03_VC36", 
+                         "HC03_VC37")]
+  
+  # VARIABLES
+  
+  familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families with own hildren under 18
+  familyData$singleDads = DP02$HC03_VC10 #5 Percent households with a single male head of household with own children under 18
+  familyData$singleMoms = DP02$HC03_VC12 #6 Percent of households with a single female head of household with own children under 18
+  familyData$seniorsLivingAlone = DP02$HC03_VC15 #7 Housholder living alone, 65 years old or over
+  familyData$avgFamilySize = DP02$HC01_VC21 #8 Average size of families
+  familyData$neverMarriedMen = DP02$HC03_VC36 #9 Percent of males 15 and older who have never married (not inc. divorced or separated)
+  familyData$marriedMen = DP02$HC03_VC37 #10 Percent of males 15 and older who are married (currently married, not inc. separated)
+  
+  # SUBSET DATA FRAME 
+  
+  familyData = familyData[ , c(1:2, 10:16)]
+  
+  # MERGE FAMILY DATA WITH POPULATION DATA
+  
+  famPopData = merge(x = populationData, y = familyData, 
+                     by = c("GEO.id2", "GEO.display.label"),
+                     all = TRUE)
+  
+  
+  # EMPLOYMENT DATA
+  
+  DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
+  
+  # FRAME CONSTRUCTION
+  
+  employmentData = DP03[ , c("GEO.id2", "GEO.display.label",
+                             "HC03_VC06", "HC03_VC08", 
+                             "HC03_VC17", "HC03_VC18",
+                             "HC03_VC41", "HC03_VC42", 
+                             "HC03_VC50", "HC03_VC51",
+                             "HC03_VC52", "HC03_VC54",
+                             "HC03_VC58")]
+  
+  # VARIABLES
+  
+  # GENERAL EMPLOYMENT
+  
+  employmentData$laborForce = DP03$HC03_VC06 #11 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+  employmentData$unemployed = DP03$HC03_VC08 #12 Unemployment Rate (percent over 16 unemployed)
+  employmentData$femaleLaborForce = DP03$HC03_VC17 #13 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+  employmentData$employedWomen = DP03$HC03_VC18 #14 Women over 16 who are employed 
+  employmentData$femaleUnemployment = 
+    (employmentData$femaleLaborForce - employmentData$employedWomen) #15 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
+  
+  # EMPLOYMENT BY OCCUPATION 
+  
+  employmentData$occManagement = DP03$HC03_VC41 #16 Pecent of the civilian labor force employed in management, business, science, and arts occupations
+  employmentData$occService = DP03$HC03_VC42 #17 Percent of the civilian labor force employed in service occupations 
+  
+  # EMPLOYMENT BY INDUSTRY
+  
+  employmentData$extractiveIndustries = DP03$HC03_VC50 #18 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+  employmentData$constructionIndustry = DP03$HC03_VC51 #19 Percent of the civilian labor force employed in the construction industry
+  employmentData$manufacturingIndustry = DP03$HC03_VC52 #20 Percent of the civilian labor force employed in the manufacturing industry
+  employmentData$retailIndustry = DP03$HC03_VC54 #21 Percent of the civilian labor force employed in the retail trade industry
+  employmentData$professionalIndustries = DP03$HC03_VC58 #22 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
+  
+  # SUBSET DATA FRAME
+  
+  employmentData = employmentData[ , c(1:2, 14:25)]
+  
+  # MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
+  
+  censusData = merge(x = famPopData, y = employmentData, 
+                     by = c("GEO.id2", "GEO.display.label"),
+                     all = TRUE)
+  
+  # SPLIT STATE NAMES AND COUNTY NAMES
+  censusData$GEO.display.label = as.character(censusData$GEO.display.label)
+  names = strsplit(as.character(censusData$GEO.display.label), split = ", ")
+  
+  # STATE NAMES
+  sNames = sapply(names, function(x) x[2])
+  
+  # APPLY REGULAR EXPRESSION AND STRING MANIPULATION TO STATE NAMES
+  sNames = gsub(" ", "", sNames)
+  sNames = tolower(sNames)
+  
+  # ADD STATE NAMES TO THE DATA FRAME
+  censusData$State = sNames
+  
+  # COUNTY NAMES
+  cNames = sapply(cNames, function(x) x[1])
+  
+  # APPLY REGULAR EXPRESSION AND STRING MANIPULATION TO COUNTY NAMES
+  cNames = gsub("&", "and", cNames)
+  cNames = gsub("-", "", cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = tolower(cNames)
+  cNames = gsub("county|parish", "", cNames)
 
-# POPULATION DATA
-
-B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
-
-# TOTAL POPULATION
-
-totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
-                       c("GEO.id2", "GEO.display.label", 
-                         "HD01_VD01")] #Frame to extract total population
-totalPopFrame$totalPop = totalPopFrame$HD01_VD01 #1 Generate total population variable
-totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
-                                   "totalPop")] # Subset to exclude HD01_VD01
-
-# WHITE POPULATION
-
-whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
-                       c("GEO.id2", "GEO.display.label", "HD01_VD01")] # Frame to extract white population
-whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
-whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
-                                   "whitePop")] # Subset to exclude HD01_VD01
-
-# MERGE INDIVIDUAL POPULATION DATA FILES
-
-populationData = merge(x = totalPopFrame, y = whitePopFrame, 
-                       by = c("GEO.id2", "GEO.display.label"),
-                       all = TRUE)
-
-# GENERATE PERCENT WHITE VARIABLE
-## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
-
-populationData$percentWhite = 
-  100*(populationData$whitePop/populationData$totalPop) #3 White population as a percent of total population
-
-
-# FAMILY STRUCTURE
-
-DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
-
-# FRAME CONSTRUCTION
-
-familyData = DP02[ , c("GEO.id2", "GEO.display.label",
-                       "HC03_VC06", "HC03_VC10", 
-                       "HC03_VC12", "HC03_VC15",
-                       "HC01_VC21", "HC03_VC36", 
-                       "HC03_VC37")]
-
-# VARIABLES
-
-familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families with own hildren under 18
-familyData$singleDads = DP02$HC03_VC10 #5 Percent households with a single male head of household with own children under 18
-familyData$singleMoms = DP02$HC03_VC12 #6 Percent of households with a single female head of household with own children under 18
-familyData$seniorsLivingAlone = DP02$HC03_VC15 #7 Housholder living alone, 65 years old or over
-familyData$avgFamilySize = DP02$HC01_VC21 #8 Average size of families
-familyData$neverMarriedMen = DP02$HC03_VC36 #9 Percent of males 15 and older who have never married (not inc. divorced or separated)
-familyData$marriedMen = DP02$HC03_VC37 #10 Percent of males 15 and older who are married (currently married, not inc. separated)
-
-# SUBSET DATA FRAME 
-
-familyData = familyData[ , c(1:2, 10:16)]
-
-# MERGE FAMILY DATA WITH POPULATION DATA
-
-famPopData = merge(x = populationData, y = familyData, 
-                   by = c("GEO.id2", "GEO.display.label"),
-                   all = TRUE)
-
-
-# EMPLOYMENT DATA
-
-DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
-
-# FRAME CONSTRUCTION
-
-employmentData = DP03[ , c("GEO.id2", "GEO.display.label",
-                           "HC03_VC06", "HC03_VC08", 
-                           "HC03_VC17", "HC03_VC18",
-                           "HC03_VC41", "HC03_VC42", 
-                           "HC03_VC50", "HC03_VC51",
-                           "HC03_VC52", "HC03_VC54",
-                           "HC03_VC58")]
-
-# VARIABLES
-
-# GENERAL EMPLOYMENT
-
-employmentData$laborForce = DP03$HC03_VC06 #11 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
-employmentData$unemployed = DP03$HC03_VC08 #12 Unemployment Rate (percent over 16 unemployed)
-employmentData$femaleLaborForce = DP03$HC03_VC17 #13 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
-employmentData$employedWomen = DP03$HC03_VC18 #14 Women over 16 who are employed 
-employmentData$femaleUnemployment = 
-  (employmentData$femaleLaborForce - employmentData$employedWomen) #15 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
-
-# EMPLOYMENT BY OCCUPATION 
-
-employmentData$occManagement = DP03$HC03_VC41 #16 Pecent of the civilian labor force employed in management, business, science, and arts occupations
-employmentData$occService = DP03$HC03_VC42 #17 Percent of the civilian labor force employed in service occupations 
-
-# EMPLOYMENT BY INDUSTRY
-
-employmentData$extractiveIndustries = DP03$HC03_VC50 #18 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
-employmentData$constructionIndustry = DP03$HC03_VC51 #19 Percent of the civilian labor force employed in the construction industry
-employmentData$manufacturingIndustry = DP03$HC03_VC52 #20 Percent of the civilian labor force employed in the manufacturing industry
-employmentData$retailIndustry = DP03$HC03_VC54 #21 Percent of the civilian labor force employed in the retail trade industry
-employmentData$professionalIndustries = DP03$HC03_VC58 #22 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
-
-# SUBSET DATA FRAME
-
-employmentData = employmentData[ , c(1:2, 14:25)]
-
-# MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
-
-censusData = merge(x = famPopData, y = employmentData, 
-                   by = c("GEO.id2", "GEO.display.label"),
-                   all = TRUE) 
-
-# REMOVE UNNEEDED OBJECTS
-
-remove(B01003, DP02, DP03, 
-       totalPopFrame, whitePopFrame,
-       populationData, familyData, 
-       famPopData, employmentData)
-
-censusData = censusData[censusData$GEO.id2 < 72001, ] # This removes the observations for Puerto Rico, which does not report election results by municipality in the provided data.
-
-# CREATE cNames
-
-censusData$cNames = as.character(censusData$GEO.display.label)
-censusData$cNames = gsub("&", "and", censusData$cNames)
-censusData$cNames = gsub("\\-", "", censusData$cNames)
-censusData$cNames = gsub(" ", "", censusData$cNames)
-censusData$cNames = tolower(censusData$cNames)
-censusData$cNames = gsub("county|parish|censusarea|borough|municipality", "", censusData$cNames)
-  # Makes county names uniform across data sets
-
-# fips code is in GEO.id2 and I still need to add a few more last variables.
+  # ADD COUNTY NAMES TO THE DATA FRAME  
+  censusData$County = cNames
+  
+  save(censusData, file = "censusData.rda")
+} else {
+  load("censusData.rda")
+}
 ```
 
 ## Final Merge
 At last, we can merge all of the data into one data frame. 
 ```{r}
-
+ censusData = censusData[censusData$GEO.id2 < 72001, ] # This removes the observations for Puerto Rico, which does not report election results by municipality in the provided data.
 ```
+
