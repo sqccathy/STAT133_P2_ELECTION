@@ -557,3 +557,8 @@ At last, we can merge all of the data into one data frame.
 
 ```
 
+## REFERENCES
+
+R Core Team (2016). R: A language and environment for statistical
+  computing. R Foundation for Statistical Computing, Vienna, Austria. URL
+  https://www.R-project.org/.
