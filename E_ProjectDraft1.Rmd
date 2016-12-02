@@ -119,17 +119,37 @@ McCain = unlist(sapply(list, function(x) x[[5]]))
 # Paste county names and state names together so the county names are unique
 County = paste0(cNames, ",", sNames)
 
-countyVotes2008 = data.frame(County, obamaVote2008 = Obama, McCainVote2008 = McCain)
+countyVotes2008 = data.frame(County, obamaVote2008 = as.numeric(as.character(Obama)), McCainVote2008 =as.numeric(as.character(McCain)))
 
 ##countyVotes2008 = read.csv("countyVotes2008.csv")
 ##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
 ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
+
+#EDA for the data
+summary(countyVotes2008$obamaVote2008)
+#  summary result is as follows
+#     Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#      8    1799    4473   21110   12190 1939000       1 
+
+#so I check where is the NA,and if the min 8 is reasonable.
+countyVotes2008[which(is.na(countyVotes2008$obamaVote2008)),]
+#The NA happens in mississippi         County obamaVote2008 McCainVote2008
+#1454 updated:11/10/20083:28pmet,mississippi            NA             NA
+
+countyVotes2008[which(countyVotes2008$obamaVote2008==8),]
+#The min happens in king,texas      County obamaVote2008 McCainVote2008
+#                      2629 king,texas             8            151
+
+#It turns out the mississippi has one row of unrelavent information.So I delete it. For the king in Texas, I checked it on wikipidia, and it makes sense.
+countyVotes2008 = countyVotes2008[-1454,]
+
 ```
 
 ## Election Results in 2012
 ```{r}
 # Code by Jieni Wan
 # Get state names
+library(XML)
 stateNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
 stateNames = as.vector(stateNames$states)
 stateNames = stateNames[-2]
