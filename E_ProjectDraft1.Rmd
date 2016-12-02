@@ -2,6 +2,7 @@
 title: "Election Project"
 Author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey, Victor Choi
 output: html_document
+---
 
 ```{r}
 create2004 = FALSE
