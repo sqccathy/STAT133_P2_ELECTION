@@ -559,6 +559,14 @@ At last, we can merge all of the data into one data frame.
 
 ## REFERENCES
 
+Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and
+  Generating XML Within R and S-Plus. R package version 3.98-1.4.
+  https://CRAN.R-project.org/package=XML
+  
+Duncan Temple Lang and the CRAN team (2016b). RCurl: General Network
+  (HTTP/FTP/...) Client Interface for R. R package version 1.95-4.8.
+  https://CRAN.R-project.org/package=RCurl
+
 Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
   Tabular Data. R package version 1.0.0.
   https://CRAN.R-project.org/package=readr
