@@ -143,6 +143,9 @@ countyVotes2008[which(countyVotes2008$obamaVote2008==8),]
 #It turns out the mississippi has one row of unrelavent information.So I delete it. For the king in Texas, I checked it on wikipidia, and it makes sense.
 countyVotes2008 = countyVotes2008[-1454,]
 
+#same for McCain
+summary(countyVotes2008$McCainVote2008)
+#it makes sense
 ```
 
 ## Election Results in 2012
