@@ -559,6 +559,10 @@ At last, we can merge all of the data into one data frame.
 
 ## REFERENCES
 
+Adrian A. Dragulescu (2014). xlsx: Read, write, format Excel 2007 and
+  Excel 97/2000/XP/2003 files. R package version 0.5.7.
+  https://CRAN.R-project.org/package=xlsx
+
 Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and
   Generating XML Within R and S-Plus. R package version 3.98-1.4.
   https://CRAN.R-project.org/package=XML
