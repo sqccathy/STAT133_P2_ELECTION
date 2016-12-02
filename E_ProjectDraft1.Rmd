@@ -395,7 +395,7 @@ ggplot(data = GML_df) +
 
   The plot looks right, which means we have properly cleaned the data.
   
-  
+  The census data required that we merge three files together   
 ## Census data from the 2010 census (BY JOHN TOWEY)
 ```{r eval = createCensus}
   # POPULATION DATA
@@ -517,8 +517,9 @@ ggplot(data = GML_df) +
   cNames = gsub("[- ]", "", cNames)
   cNames = gsub("<", "", cNames)
   cNames = gsub(">", "", cNames)
+  cNames = gsub("\\.", "", cNames)
   cNames = tolower(cNames)
-  cNames = gsub("county|parish", "", cNames)
+  cNames = gsub("county|parish|borough|municipality|municipio|censusarea", "", cNames)
   cNames = gsub("&", "and", cNames)
   
   # SPLIT STATE NAMES AND COUNTY NAMES
