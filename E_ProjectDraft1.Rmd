@@ -2,20 +2,25 @@
 title: "Election Project"
 Author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey, Victor Choi
 output: html_document
----
+
+```{r}
+create2004 = FALSE
+create2008 = FALSE
+create2012 =FALSE
+create2016 = FALSE
+createGML = FALSE
+createCensus = FALSE
+```
 
 ### STEP 1: DATA WRANGLING
 
-## Election Results in 2004
-```{r}
-# Code by Menglu Cao
-createSource1 = F
-if(createSource1) {
+## Election Results in 2004 (By Menglu Cao)
+```{r eval = create2004}
   require(readr)
-  countyVotes2004 = read_delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", delim = ' ')
+  countyVotes2004 = read.delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", sep = "")
   
   # Split state names and county names
-  names = strsplit(countyVotes2004$countyName, split = ",")
+  names = strsplit(as.character(countyVotes2004$countyName), split = ",")
   
   # State names
   sNames = sapply(names, function(x) x[1])
@@ -37,7 +42,7 @@ if(createSource1) {
   # Change & to and in county names
   cNames = gsub("&", "and", cNames)
   # Remove county or parish from county names
-  cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+  cNames = gsub("county|parish", "", cNames)
   # Eliminate	.	from county names
   cNames = gsub("\\.", "", cNames)
   
@@ -48,7 +53,7 @@ if(createSource1) {
   countyVotes2004 = countyVotes2004[, c(5, 4, 2, 3)]
   
   # Change variable names in the data frame
-  names(countyVotes2004)[c(3, 4)] = c("bushVote2004", "kerryVote2004")
+  names(countyVotes2004)[c(3, 4)] = c("BushVote2004", "KerryVote2004")
   
   # Scrape data of votes in Virginia from HTML tables
   require(XML)
@@ -74,33 +79,68 @@ if(createSource1) {
   cNames = tolower(cNames)
   cNames = gsub(" ", "", cNames)
   cNames = gsub("&", "and", cNames)
-  cNames = gsub("county|parish", "", cNames, ignore.case = TRUE)
+  cNames = gsub("county|parish", "", cNames)
   cNames = gsub("\\.", "", cNames)
   
   # Create a character vector consisting of "virginia"
   sNames = rep("virginia", length(cNames))
   
   # Number of votes for Bush & Kerry
-  bushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
-  kerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
+  BushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
+  KerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
   
   # Create a data frame for Virginia
-  Virginia2004 = data.frame(County = cNames, State = sNames, bushVote2004, kerryVote2004)
+  Virginia2004 = data.frame(County = cNames, State = sNames, BushVote2004, KerryVote2004)
   
   # Add data of votes in Virginia to countyVotes2004
   countyVotes2004 = rbind(countyVotes2004, Virginia2004)
   
+  # EDA of the data
+  # Summary Statistics of number of votes for Bush
+  summary(countyVotes2004$BushVote2004)
+  #    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #      65    2946    6367   19160   16080  954800 
+  
+  # Check if the minimum is reasonable
+  countyVotes2004[which(countyVotes2004$BushVote2004 ==
+                        min(countyVotes2004$BushVote2004)), ]
+  #      County State BushVote2004 KerryVote2004
+  # 2587 loving texas           65            12
+  # The min occurs in Loving, Texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in the United States. Thus the minimum being 54 makes sense.
+  
+  # Check if the maximum is reasonable
+  countyVotes2004[which(countyVotes2004$BushVote2004 == max(countyVotes2004$BushVote2004)), ]
+  #         County      State BushVote2004 KerryVote2004
+  # 176 losangeles california       954764       1670341
+  
+  # The max occurs in Los Angeles, California. According to Wikipedia, the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the maximum being 954764 makes sense.
+  
+  # Summary statistics of number of votes for Mccain
+  summary(countyVotes2004$KerryVote2004)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #   12    1782    4048   18060   10550 1670000
+  
+  # Check if the minimum and maximum are reasonable
+  countyVotes2004[which(countyVotes2004$KerryVote2004 ==
+                        min(countyVotes2004$KerryVote2004)), ]
+  #      County State BushVote2004 KerryVote2004
+  # 2587 loving texas           65            12
+
+  countyVotes2004[which(countyVotes2004$KerryVote2004 == max(countyVotes2004$KerryVote2004)), ]
+  #         County      State BushVote2004 KerryVote2004
+  # 176 losangeles california       954764       1670341
+  
+  # According to the explanation for the max and min for votes for Bush, the maximum and minimum here make sense as well
+  
   save(countyVotes2004, file = "countyVotes2004.rda")
-} else {
-  load("countyVotes2004.rda")
-}
 ```
 
-## Election Results in 2008
 ```{r}
-# Code by Qichen Sun
-createSource2 = F
-if(createSource2) {
+  load("countyVotes2004.rda")
+```
+
+## Election Results in 2008 (BY Qichen Sun)
+```{r eval = create2008}
   library(xlsx)
   wb = loadWorkbook("countyVotes2008.xlsx")
   sheets = getSheets(wb)
@@ -130,69 +170,59 @@ if(createSource2) {
   
   Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
   
-  McCain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
+  Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
   
-  countyVotes2008 = data.frame(County = cNames, State = sNames, obamaVote2008 = Obama, McCainVote2008 = McCain)
-  
-  # Check if there is any county belonging to Hawaii or Alaska. If so, drop these counties
-  if(any(countyVotes2008$State == "hawaii" | countyVotes2008$State == "alaska")) {
-    countyVotes2008 = countyVotes2008[countyVotes2008$State != "hawaii" &
-                                      countyVotes2008$State != "alaska", ]
-  }
+  countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
   
   ##countyVotes2008 = read.csv("countyVotes2008.csv")
-  ##names(countyVotes2008)[c(4,5)] = c("obamaVote2008", "mcCainVote2008")
+  ##names(countyVotes2008)[c(4,5)] = c("ObamaVote2008", "MccainVote2008")
   ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
   
-  # EDA of number of votes for Obama
-  summary(countyVotes2008$obamaVote2008)
-  #     Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-  #      8    1799    4473   21110   12190 1939000       1 
+  # EDA of the data
+  # Summary Statistics of number of votes for Obama
+  summary(countyVotes2008$ObamaVote2008)
+  #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+  #     8    1799    4473   21110   12190 1939000       1 
   
   # Check which county's number of votes for Obama is not available 
-  countyVotes2008[which(is.na(countyVotes2008$obamaVote2008)), ]
-  #                          County       State obamaVote2008
+  countyVotes2008[which(is.na(countyVotes2008$ObamaVote2008)), ]
+  #                          County       State ObamaVote2008
   # 1454 updated:11/10/20083:28pmet mississippi            NA
-  #      McCainVote2008
+  #      MccainVote2008
   # 1454             NA
   
   # There is one row of irrelevant information in Mississipi. Drop it from the data frame.
-  countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$obamaVote2008), ]
+  countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
   
-  # Check if the minimum is reasonable
-  countyVotes2008[which(countyVotes2008$obamaVote2008 == 8), ]
+  # The minimum looks a bit bizarre. Check if it is reasonable
+  countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
   
-  #      County State obamaVote2008 McCainVote2008
+  #      County State ObamaVote2008 MccainVote2008
   # 2629   king texas             8            151
-  # The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Thus the minimum being 8 makes sense.
+  # The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
   
-  # Check if the maximum is reasonable
-  countyVotes2008[which(countyVotes2008$obamaVote2008 == max(countyVotes2008$obamaVote2008)), ]
-  #        County      State obamaVote2008 McCainVote2008
-  #177 losangeles california       1938744         826512
+  # Summary statistics of number of votes for Mccain
+  summary(countyVotes2008$MccainVote2008)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #   67    2867    6243   18540   15850  826500
+  # They makes sense
   
-  # The max occurs in Los Angeles, California. According to Wikipedia, the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the maximum being 1938744 makes sense.
-  
-  # Summary statistics of number of votes for McCain
-  summary(countyVotes2008$McCainVote2008)
-  # It makes sense
   save(countyVotes2008, file = "countyVotes2008.rda")
-} else {
-  load("countyVotes2008.rda")
-}
 ```
 
-## Election Results in 2012
 ```{r}
-# Code by Jieni Wan
-createSource3 = F
-if(createSource3) {
+  load("countyVotes2008.rda")
+```
+
+## Election Results in 2012 (By Jieni Wan)
+```{r eval = create2012}
+  require(XML)
   # Get state names
-  sNames = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
-  sNames = as.vector(sNames$states)
+  sNames_df = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
+  sNames = as.vector(sNames_df$states)
   
-  # Drop hawaii and alaska from stateNames since we have decided to skip them
-  sNames = sNames[sNames != "hawaii" & sNames != "alaska"]
+  # Since there is no HTTP resource for Alaska, drop it from sNames
+  sNames = sNames[sNames != "alaska"]
   
   # Create a vector consisting of all the websites we are going to use
   xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", sNames, ".xml")
@@ -201,14 +231,14 @@ if(createSource3) {
   xmlList = lapply(xml2012, xmlParse)
   
   # Extract the desired information from each xml file, i.e., the number of votes for Obama and Romney, together with the county names
-  Obama = lapply(xmlList, function(x){
-    xpathSApply(xmlRoot(x), "//abbr[@title='Democratic']/../../td[@class='results-popular']", xmlValue)
+  Obama = lapply(xmlList, function(x) {
+    xpathSApply(xmlRoot(x), "//abbr[@title = 'Democratic']/../../td[@class='results-popular']", xmlValue)
   })
-  Romney = lapply(xmlList, function(x){
-    xpathSApply(xmlRoot(x), "//abbr[@title='Republican']/../../td[@class='results-popular']", xmlValue)
+  Romney = lapply(xmlList, function(x) {
+    xpathSApply(xmlRoot(x), "//abbr[@title = 'Republican']/../../td[@class='results-popular']", xmlValue)
   })
-  cNames = lapply(xmlList, function(x){
-    xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class='results-county']", xmlValue)
+  cNames = lapply(xmlList, function(x) {
+    xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class = 'results-county']", xmlValue)
   })
   
   # Convert the lists to numeric vectors
@@ -222,6 +252,7 @@ if(createSource3) {
   cNames = gsub("\\.", "", cNames)
   cNames = gsub(" ", "", cNames)
   cNames = gsub("[0-9]", "", cNames)
+  cNames = gsub("county|parish", "", cNames)
   sNames = gsub("-", "", sNames)
   
   # Repeat state names to match county names
@@ -230,56 +261,39 @@ if(createSource3) {
   # Create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012
   countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, RomneyVote2012)
   
-  save(countyVotes2012, file = "countyVotes2012.rda")
-} else {
-  load("countyVotes2012.rda")
-}
-
   # EDA of the data
   # Summary statistics of number of votes for Obama
   summary(countyVotes2012$ObamaVote2012)
   #  Min.  1st Qu.  Median  Mean   3rd Qu. Max.
   #   5    1552     3945    19860  11090   1672000 
-  
-  # NA does not exist, but the minimum is 5 and the maximum is 1672000, which may be unreasonable.
-  
-  # Check the minimum and the maximum to see if they are acceptable.
-  countyVotes2012[which(countyVotes2012$ObamaVote2012 == 5), ]
-  
-  #        ObamaVote2012   RomneyVote2012     County
-  # 2628          5            139          king,texas
-  
-  countyVotes2012[which(countyVotes2012$ObamaVote2012 == max(countyVotes2012$ObamaVote2012)), ]
-  
-  #        ObamaVote2012   RomneyVote2012        County
-  # 176       1672164         699600        losangeles,california 
-  
-  # The min occurs in king, texas and the max occurs in losangeles, california, which are acceptable due to the similar reasons mentioned above. 
-  
+
+  # NA does not exist, but the minimum is 5, which might be unreasonable
+
+  # Check the minimum to see if it is acceptable
+  countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
+                          min(countyVotes2012$ObamaVote2012)), ]
+  #     County State ObamaVote2012 RomneyVote2012
+  #2628   king texas             5            139
+ 
+  # The min occurs in King, Texas. It is acceptable due to previous explanation.
+
   # Summary statistics of number of votes for Romney
   summary(countyVotes2012$RomneyVote2012)
   # Min.  1st Qu.  Median  Mean   3rd Qu.  Max. 
   # 54    2889     6383    18800  15950    699600 
+  # They make sense.
   
-  # Only need to check the minimum.
-  countyVotes2012[which(countyVotes2012$RomneyVote2012 == 54), ]
-  
-  #        ObamaVote2012   RomneyVote2012    County
-  #  2644         9             54          loving,texas
-  
-  # The min occurs in loving, texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in Texas. Thus the minimum being 54 makes sense.
+  save(countyVotes2012, file = "countyVotes2012.rda")
 ```
 
-## Election Results in 2016
 ```{r}
-# Code by Victor Choi
-createSource4 = F
-if(createSource4) {
+  load("countyVotes2012.rda")
+```
+
+## Election Results in 2016 (By Victor Choi)
+```{r eval = create2016}
+  require(readr)
   countyVotes2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
-  
-  # Drop Alaska and Hawaii from the data frame
-  countyVotes2016 = countyVotes2016[countyVotes2016$state_abbr != "AK" &
-                                    countyVotes2016$state_abbr != "HI", ]
   
   # We change all the county names to lower case, remove spaces, substitute & for and, remove periods, remove county or parish
   countyVotes2016$county_name = tolower(countyVotes2016$county_name)
@@ -288,28 +302,47 @@ if(createSource4) {
   countyVotes2016$county_name = gsub("county|parish", "", countyVotes2016$county_name)
   countyVotes2016$county_name = gsub("\\.", "", countyVotes2016$county_name)
   
-  # We keep the FIPS, in order to merge with other data sources; we also keep numbers of votes for Clinton and Trump
-  countyVotes2016 = countyVotes2016[, c(11, 2, 3)]
+  # We keep the FIPS, in order to merge with other data sources; we also keep numbers of votes for Clinton and Trump, and the state abbreviations and county names for further data cleaning
+  countyVotes2016 = countyVotes2016[, c(10, 9, 2, 3, 11)]
   
-  names(countyVotes2016)[c(2, 3)] = c("clintonVote2016", "trumpVote2016")
+  names(countyVotes2016)[c(3, 4)] = c("ClintonVote2016", "TrumpVote2016")
 
+  # EDA of the data
+  # Summary Statistics of number of votes for Clinton
+  summary(countyVotes2016$ClintonVote2016)
+  #   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #      4    1173    3192   20240    9959 1655000
+  
+  # The minimum number of votes for Clinton is 4, which is extremely small. Check if it is reasonable
+  countyVotes2016[which(countyVotes2016$ClintonVote2016 ==
+                        min(countyVotes2016$ClintonVote2016)), ]
+  #      county_name state_abbr ClintonVote2016 TrumpVote2016 combined_fips
+  # 2673      loving         TX               4            57         48301
+  # The min occurs in King, Texas. It is acceptable due to the explanation above. 
+  
+  # Summary statistics of number of votes for Trump
+  summary(countyVotes2016$TrumpVote2016)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #   57    3241    7239   20370   17980  590500
+  # They make sense.
+  
   save(countyVotes2016, file = "countyVotes2016.rda")
-} else {
-  load("countyVotes2016.rda")
-}
 ```
 
-## GML data that contains the latitude and longitude for each county
+```{r}
+  load("countyVotes2016.rda")
+```
+
+## GML data that contains the latitude and longitude for each county (By Menglu Cao)
 
   The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing three variables in this data frame, namely the county names, the latitude and longitude for each county.
   
-```{r} 
-# Code by Menglu Cao
-createSource5 = F
-if(createSource5) {
+  
+```{r eval = CreateGML} 
   require(XML)
   GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
   doc = xmlRoot(GML)
+  
   # County names
   cNames = as.character(xpathSApply(doc, "//county/gml:name", xmlValue))
   cNames = tolower(cNames)
@@ -338,17 +371,13 @@ if(createSource5) {
   
   # Create a data frame which contain the county names, the correspondent state names, and the latitude and longitude for each county
   GML_df = data.frame(County = cNames, State = sNames, Latitude, Longitude, stringsAsFactors = FALSE)
-
-  # Since we have decided that we won't look into Hawaii or Alaska, we will have to make sure that we drop the counties in Hawaii or Alaska. We will first check if there is any county belonging to Hawaii or Alaska.
-  if(any(GML_df$State == "hawaii" | GML_df$State == "alaska")) {
-    GML_df = GML_df[GML_df$State != "hawaii" & GML_df$State != "alaska", ]
-  }
   
   # Save the intermediate file for efficiency consideration
   save(GML_df, file = "GML.rda")
-} else {
-  load("GML.rda")
-}
+```
+
+```{r}
+load("GML.rda")
 ```
 
   We'll then plot the counties by their coordinates to see if the result looks like the map of United States yet without Alaska and Hawaii.
@@ -363,16 +392,11 @@ ggplot(data = GML_df) +
   theme_bw()
 ```
 
-  According to the plot above, it is safe to say that the map looks right, which means we have properly cleaned the data.
+  The plot looks right, which means we have properly cleaned the data.
   
   
-## Census data from the 2010 census
-```{r}
-# CODE BY JOHN TOWEY
-
-createSource6 = F
-if(createSource6) {
-  
+## Census data from the 2010 census (BY JOHN TOWEY)
+```{r eval = createCensus}
   # POPULATION DATA
   
   B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
@@ -515,14 +539,11 @@ if(createSource6) {
   names(censusData)[1] = "FIPS"
   censusData = censusData[, -2]
   
-  # Drop the counties in Alaska or Hawaii.
-  censusData = censusData[censusData$State != "alaska" &
-                          censusData$State != "hawaii", ]
-  
   save(censusData, file = "censusData.rda")
-} else {
+```
+
+```{r}
   load("censusData.rda")
-}
 ```
 
 ## Final Merge
