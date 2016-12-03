@@ -522,7 +522,7 @@ ggplot(data = GML_df) +
   cNames = gsub(">", "", cNames)
   cNames = gsub("\\.", "", cNames)
   cNames = tolower(cNames)
-  cNames = gsub("county|parish|borough|municipality|municipio|censusarea", "", cNames)
+  cNames = gsub("county|parish|city|municipality|municipio|censusarea", "", cNames)
   cNames = gsub("&", "and", cNames)
   
   # SPLIT STATE NAMES AND COUNTY NAMES
