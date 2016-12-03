@@ -16,10 +16,15 @@ createCensus = FALSE
 ### STEP 1: DATA WRANGLING
 
 ## Election Results in 2004 (By Menglu Cao)
-```{r}
+
+First, read the txt file of election results in 2004 into R.
+```{r eval = creat2004}
   require(readr)
   countyVotes2004 = read.delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", sep = "")
-  
+```
+
+For convenience in final merging, apply regular expressions and string manipulations to county names and state names so that they have the same format. Stipulate that all names should only contain lowercase letters. Then add the state names and county names we get to the data frame, countyVotes2004, as new variables. Subset the data frame to extract the information we want, namely, county names, state names, number of votes for Bush and Kerry.
+```{r eval = creat2004}
   # Split state names and county names
   names = strsplit(as.character(countyVotes2004$countyName), split = ",")
   
@@ -55,7 +60,10 @@ createCensus = FALSE
   
   # Change variable names in the data frame
   names(countyVotes2004)[c(3, 4)] = c("BushVote2004", "KerryVote2004")
-  
+```
+
+Notice that data of votes in Virginia are missing. So scrape those data from HTML tables in Wikipedia and add them to the data frame, countyVotes2004. Of course, names of counties and states should be converted to the same format mentioned above.  
+```{r}
   # Scrape data of votes in Virginia from HTML tables
   require(XML)
   require(RCurl)
@@ -101,27 +109,25 @@ createCensus = FALSE
   
   # Add data of votes in Virginia to countyVotes2004
   countyVotes2004 = rbind(countyVotes2004, Virginia2004)
-  
-  # EDA of the data
+```
+
+Carry out EDA (Exploratory Data Analysis) to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates. It turns out that the minimum of votes for Bush is only 65 and the maximum is 1670341, which may not be reasonable. Therefore we find the two rows corresponding to the min and max votes respectively to see the specific locations where the min and max occur. 
+
+The min occurs in Loving, Texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in the United States. In addition, The max occurs in Los Angeles, California and the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the minimum being 54 and the maximum being 954764 make sense.  
+```{r}
   # Summary Statistics of number of votes for Bush
   summary(countyVotes2004$BushVote2004)
-  #    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  #      65    2946    6367   19160   16080  954800 
   
   # Check if the minimum is reasonable
   countyVotes2004[which(countyVotes2004$BushVote2004 ==
                         min(countyVotes2004$BushVote2004)), ]
-  #      County State BushVote2004 KerryVote2004
-  # 2587 loving texas           65            12
-  # The min occurs in Loving, Texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in the United States. Thus the minimum being 54 makes sense.
   
   # Check if the maximum is reasonable
   countyVotes2004[which(countyVotes2004$BushVote2004 == max(countyVotes2004$BushVote2004)), ]
-  #         County      State BushVote2004 KerryVote2004
-  # 176 losangeles california       954764       1670341
-  
-  # The max occurs in Los Angeles, California. According to Wikipedia, the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the maximum being 954764 makes sense.
-  
+```
+ 
+Similarly, use summary function for the number of votes for Kerry and check whether the minimum and maximum are reasonable. Actually, th places where the min and max occur are again Loving in Texas and Los Angeles in California respectively, which account for the numbers of votes.
+```{r eval = create2004} 
   # Summary statistics of number of votes for Mccain
   summary(countyVotes2004$KerryVote2004)
   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -130,21 +136,15 @@ createCensus = FALSE
   # Check if the minimum and maximum are reasonable
   countyVotes2004[which(countyVotes2004$KerryVote2004 ==
                         min(countyVotes2004$KerryVote2004)), ]
-  #      County State BushVote2004 KerryVote2004
-  # 2587 loving texas           65            12
 
   countyVotes2004[which(countyVotes2004$KerryVote2004 == max(countyVotes2004$KerryVote2004)), ]
-  #         County      State BushVote2004 KerryVote2004
-  # 176 losangeles california       954764       1670341
-  
-  # According to the explanation for the max and min for votes for Bush, the maximum and minimum here make sense as well
-  
-  save(countyVotes2004, file = "countyVotes2004.rda")
 ```
 
-```{r}
+```{r eval = create2004}
+  save(countyVotes2004, file = "countyVotes2004.rda")
   load("countyVotes2004.rda")
 ```
+
 
 ## Election Results in 2008 (BY Qichen Sun)
 ```{r eval = create2008}
@@ -162,7 +162,7 @@ createCensus = FALSE
 sNames = tolower(gsub(" ", "", sNames))[-1]
 ```  
   # Import xlsx file into a list
-```{r eval = create2008}
+```{r eval = create2008} 
 list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
 ```  
   # Repeat state names to match the county names
@@ -178,7 +178,7 @@ cNames = unlist(sapply(list, function(x) x[[1]]))
 ```{r eval = create2008}
   cNames = tolower(cNames)
   cNames = gsub(" ", "", cNames)
-  cNames = gsub("&", "and", cNames)
+  cNames = gsub("&|'", "and", cNames)
   cNames = gsub("county|parish", "", cNames)
   cNames = gsub("\\.", "", cNames)
   
@@ -235,24 +235,32 @@ save(countyVotes2008, file = "countyVotes2008.rda")
 
 ```{r}
   load("countyVotes2008.rda")
+```
 
 ## Election Results in 2012 (By Jieni Wan)
+
+First read txt file into R to create a vector consisting of all the state names. The length of this vector is supposed to be 51 since there are 51 state names in the txt file. However, we find that there is no HTTP resource for Alaska, thus "Alaska" should be dropped from the vector.
 ```{r eval = create2012}
   require(XML)
   # Get state names
   sNames_df = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
   sNames = as.vector(sNames_df$states)
   
-  # Since there is no HTTP resource for Alaska, drop it from sNames
+  #Drop Alaska from sNames
   sNames = sNames[sNames != "alaska"]
-  
+```
+
+Notice that the data of votes in 2012 are available at "http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/xxx.xml", where the "xxx" is replaced by the state names. Paste the state names with the same part among the websites to create a new vector containing all the websites we are going to use and then read these xml files into R.
+
+For each xml file, extract the information we want, i.e., the number of votes for Obama and Romney, together with the county names. Revise the format of county names as stipulated. What's more, since the state names do not exist in the xml files, we need a vector made up by state names to match the relative counties to create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012. 
+```{r eval = create2012}
   # Create a vector consisting of all the websites we are going to use
   xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", sNames, ".xml")
   
   # Get a list of the xml file of each website
   xmlList = lapply(xml2012, xmlParse)
   
-  # Extract the desired information from each xml file, i.e., the number of votes for Obama and Romney, together with the county names
+  # Extract the desired information from each xml file
   Obama = lapply(xmlList, function(x) {
     xpathSApply(xmlRoot(x), "//abbr[@title = 'Democratic']/../../td[@class='results-popular']", xmlValue)
   })
@@ -275,40 +283,30 @@ save(countyVotes2008, file = "countyVotes2008.rda")
   cNames = gsub(" ", "", cNames)
   cNames = gsub("[0-9]", "", cNames)
   cNames = gsub("county|parish", "", cNames)
-  sNames = gsub("-", "", sNames)
+  sNames = gsub("-|'", "", sNames)
   
   # Repeat state names to match county names
   sNames = rep(sNames, sapply(Obama, length))
   
   # Create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012
   countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, RomneyVote2012)
-  
-  # EDA of the data
+ ```
+ 
+ Carry out EDA. Use summary statistics of the number of votes for Obama and Romney. It turns out that no NA exists and the values of these statistics of votes for Romney are acceptable, but the minimum of votes for Obama is only 5, which may be unreasonable. To check this, we need to find the row in which the number of votes for Obama is 5. And it turns out that the min occurs in King, Texas. It is acceptable due to previous explanation. 
+ ```{r eval = create2012}
   # Summary statistics of number of votes for Obama
   summary(countyVotes2012$ObamaVote2012)
-  #  Min.  1st Qu.  Median  Mean   3rd Qu. Max.
-  #   5    1552     3945    19860  11090   1672000 
-
-  # NA does not exist, but the minimum is 5, which might be unreasonable
-
+ 
   # Check the minimum to see if it is acceptable
   countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
                           min(countyVotes2012$ObamaVote2012)), ]
-  #     County State ObamaVote2012 RomneyVote2012
-  #2628   king texas             5            139
- 
-  # The min occurs in King, Texas. It is acceptable due to previous explanation.
 
   # Summary statistics of number of votes for Romney
   summary(countyVotes2012$RomneyVote2012)
-  # Min.  1st Qu.  Median  Mean   3rd Qu.  Max. 
-  # 54    2889     6383    18800  15950    699600 
-  # They make sense.
-  
-  save(countyVotes2012, file = "countyVotes2012.rda")
-```
+``` 
 
 ```{r}
+  save(countyVotes2012, file = "countyVotes2012.rda")
   load("countyVotes2012.rda")
 ```
 
