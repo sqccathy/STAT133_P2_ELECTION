@@ -572,11 +572,55 @@ ggplot(data = GML_df) +
   load("censusData.rda")
 ```
 
+
 ## Final Merge
 At last, we can merge all of the data into one data frame. 
+#By Victor Choi
 ```{r}
+merge0812 = merge(countyVotes2012,countyVotes2008, by = c("County", "State"), all = TRUE)
 
+merge0812[which(is.na(merge0812$ObamaVote2012)), ]
+#         County  State ObamaVote2012 RomneyVote2012 obamaVote2008 McCainVote2008 
+#  3114   alaska alaska       NA             NA         80505         136585
+merge0812[which(is.na(merge0812$obamaVote2008)), ]
+#       County          State           ObamaVote2012 RomneyVote2012 obamaVote2008 McCainVote2008
+#784 districtofcolumbia districtofcolumbia  222332        17337            NA           NA
 ```
+
+We find that the 2008 data does not contain data for District of Columbia, so we decide to code it in.
+We also find that 2012 data does not contain data for Alaska, so we decided to remove the row.
+
+```{r}
+merge0812[which(merge0812$County == "districtofcolumbia"), c(5,6)] = c(245800, 17367)
+merge0812 = merge0812[(which(!merge0812$County %in% c("alaska"))), ]
+
+finalDataFrame = merge0812
+```
+
+```{r}
+mergecensus16 = merge(countyVotes2016, censusData, by.x = "combined_fips", by.y = "FIPS", all = TRUE)
+
+mergecensus16[which(is.na(mergecensus16$ClintonVote2016)), ]
+mergecensus16[which(is.na(censusData$County)), ]
+```
+
+We find that in the 2016 data, there is no data for Puerto Rico. As in the other data sets there is also no data for Puerto Rico, we decide to take it out.
+We also find that data for Bedford City is missing in 2016. Upon further research, we find that in 2013 Bedford City became no longer an independent city, thus, there is no "Bedford City" in the 2016 data. We decided to leave the NAs for now.
+
+We also decide to take out the State Abbreviation column, for clarity.
+
+
+```{r}
+mergecensus16 = mergecensus16[(which(!mergecensus16$State.y == c("puertorico"))), ]
+mergecensus16 = mergecensus16[ ,!(names(mergecensus16) == "State.x")]
+names(mergecensus16)[28] = "State"
+```
+
+```{r}
+merge0812c16 = merge(merge0812, mergecensus16, by.x = c("County", "State"), by.y = c("County.x", "State"), all =TRUE)
+merge0812c16[which(is.na(merge0812c16$ClintonVote2016)), ]
+```
+
 
 ## REFERENCES
 
