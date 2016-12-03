@@ -578,3 +578,6 @@ Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
 R Core Team (2016). R: A language and environment for statistical
   computing. R Foundation for Statistical Computing, Vienna, Austria. URL
   https://www.R-project.org/.
+
+United States presidential election in Texas, 2008
+https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
