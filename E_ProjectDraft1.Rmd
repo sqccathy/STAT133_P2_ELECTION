@@ -16,7 +16,7 @@ createCensus = FALSE
 ### STEP 1: DATA WRANGLING
 
 ## Election Results in 2004 (By Menglu Cao)
-```{r eval = create2004}
+```{r}
   require(readr)
   countyVotes2004 = read.delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", sep = "")
   
@@ -73,8 +73,14 @@ createCensus = FALSE
   tableChar = do.call(rbind, sapply(1:nrows, function(i) {
                   strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
   
-  # Names of counties in Virginia
-  cNames = tableChar[-1, 1]
+  # Names of counties and the states they belong in Virginia
+  names = tableChar[-1, 1]
+  counties = names[!grepl(",", names)]
+  independentCity = c(sapply(strsplit(names[grepl(",", names)], split = ","), 
+                                    function(x) paste0(x[1], "city")))
+  
+  # County names
+  cNames = c(counties, independentCity)
   
   # Apply regular expressions and string munipulations to county names
   cNames = tolower(cNames)
@@ -84,7 +90,7 @@ createCensus = FALSE
   cNames = gsub("\\.", "", cNames)
   
   # Create a character vector consisting of "virginia"
-  sNames = rep("virginia", length(cNames))
+  sNames = rep("virginia", length(names))
   
   # Number of votes for Bush & Kerry
   BushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
@@ -138,6 +144,81 @@ createCensus = FALSE
 
 ```{r}
   load("countyVotes2004.rda")
+```
+
+## Election Results in 2008 (BY Qichen Sun)
+```{r eval = create2008}
+  library(xlsx)
+  wb = loadWorkbook("countyVotes2008.xlsx")
+  sheets = getSheets(wb)
+  
+  # Get state names
+  sNames = names(sheets)
+  
+  # Apply regular expressions and string munipulations to state names
+  sNames = tolower(gsub(" ", "", sNames))[-1]
+  
+  # Import xlsx file into a list
+  list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
+  
+  # Repeat state names to match the county names
+  num_of_county = sapply(list, nrow)
+  sNames = rep(sNames, num_of_county)
+  
+  # Get county names
+  cNames = unlist(sapply(list, function(x) x[[1]]))
+  
+  # Apply regular expressions and string munipulations to county names
+  cNames = tolower(cNames)
+  cNames = gsub(" ", "", cNames)
+  cNames = gsub("&", "and", cNames)
+  cNames = gsub("county|parish", "", cNames)
+  cNames = gsub("\\.", "", cNames)
+  
+  Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
+  
+  Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
+  
+  countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
+  
+  ##countyVotes2008 = read.csv("countyVotes2008.csv")
+  ##names(countyVotes2008)[c(4,5)] = c("ObamaVote2008", "MccainVote2008")
+  ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
+  
+  # EDA of the data
+  # Summary Statistics of number of votes for Obama
+  summary(countyVotes2008$ObamaVote2008)
+  #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+  #     8    1799    4473   21110   12190 1939000       1 
+  
+  # Check which county's number of votes for Obama is not available 
+  countyVotes2008[which(is.na(countyVotes2008$ObamaVote2008)), ]
+  #                          County       State ObamaVote2008
+  # 1454 updated:11/10/20083:28pmet mississippi            NA
+  #      MccainVote2008
+  # 1454             NA
+  
+  # There is one row of irrelevant information in Mississipi. Drop it from the data frame.
+  countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
+  
+  # The minimum looks a bit bizarre. Check if it is reasonable
+  countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
+  
+  #      County State ObamaVote2008 MccainVote2008
+  # 2629   king texas             8            151
+  # The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
+  
+  # Summary statistics of number of votes for Mccain
+  summary(countyVotes2008$MccainVote2008)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #   67    2867    6243   18540   15850  826500
+  # They makes sense
+  
+  save(countyVotes2008, file = "countyVotes2008.rda")
+```
+
+```{r}
+  load("countyVotes2008.rda")
 ```
 
 ## Election Results in 2008 (BY Qichen Sun)
