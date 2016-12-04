@@ -394,8 +394,8 @@ load("GML.rda")
 ```
   
 ## Census data from the 2010 census (BY JOHN TOWEY)
-  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population from the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive a percentage of population that is white in each county. 
-  We then extract data from the second file on family structures within counties. We look at families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
+  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county. 
+  We then extract data from the second file on family structures within counties. We look at, e.g., families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
   Then we extract employment data, including labor force participation and unemployent rates, female labor force participation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
   After we extract the variabels, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
 ```{r eval = createCensus}
@@ -446,13 +446,21 @@ load("GML.rda")
   
   # VARIABLES
   
-  familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families with own hildren under 18
-  familyData$singleDads = DP02$HC03_VC10 #5 Percent households with a single male head of household with own children under 18
-  familyData$singleMoms = DP02$HC03_VC12 #6 Percent of households with a single female head of household with own children under 18
-  familyData$seniorsLivingAlone = DP02$HC03_VC15 #7 Housholder living alone, 65 years old or over
-  familyData$avgFamilySize = DP02$HC01_VC21 #8 Average size of families
-  familyData$neverMarriedMen = DP02$HC03_VC36 #9 Percent of males 15 and older who have never married (not inc. divorced or separated)
-  familyData$marriedMen = DP02$HC03_VC37 #10 Percent of males 15 and older who are married (currently married, not inc. separated)
+  familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families of any kind with own hildren under 18 
+  familyData$marriedcouples = DP02$HC03_VC07 #5 Percent of households that are married couples
+  familyData$marriedWithChildren = DP02$HC03_VC08 #6 Percent of households that are married couples with own children under 18
+  familyData$maleHouseholder = DP02$HC03_VC09 #7 Percent of households with a male householder and no wife present
+  familyData$singleDads = DP02$HC03_VC10 #8 Percent households with a single male head of household with own children under 18
+  familyData$femaleHouseholder = DP02$HC03_VC11 #9 Percent of households with a female householder and no husband present
+  familyData$singleMoms = DP02$HC03_VC12 #10 Percent of households with a single female head of household with own children under 18
+  familyData$nonFamilyHouseholds = DP02$HC03_VC13 #11 Percent of households that are non-family households
+  familyData$livingAlone = DP02$HC03_VC14 #12 Percent of households that are householders living alone
+  familyData$seniorsLivingAlone = DP02$HC03_VC15 #13 Percent housholder living alone, 65 years old or over
+  familyData$youthHouseholds = DP02$HC03_VC17 #14 Percent households with at least one person under 18
+  familyData$seniorHouseholds = DP02$HC03_VC18 #15 Percent households with at least one person over 65
+  familyData$avgFamilySize = DP02$HC01_VC21 #16 Average size of families
+  familyData$neverMarriedMen = DP02$HC03_VC36 #17 Percent of males 15 and older who have never married (not inc. divorced or separated)
+  familyData$marriedMen = DP02$HC03_VC37 #18 Percent of males 15 and older who are married (currently married, not inc. separated)
   
   # SUBSET DATA FRAME 
   
@@ -483,25 +491,25 @@ load("GML.rda")
   
   # GENERAL EMPLOYMENT
   
-  employmentData$laborForce = DP03$HC03_VC06 #11 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
-  employmentData$unemployed = DP03$HC03_VC08 #12 Unemployment Rate (percent over 16 unemployed)
-  employmentData$femaleLaborForce = DP03$HC03_VC17 #13 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
-  employmentData$employedWomen = DP03$HC03_VC18 #14 Women over 16 who are employed 
+  employmentData$laborForce = DP03$HC03_VC06 #19 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+  employmentData$unemployed = DP03$HC03_VC08 #20 Unemployment Rate (percent over 16 unemployed)
+  employmentData$femaleLaborForce = DP03$HC03_VC17 #21 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+  employmentData$employedWomen = DP03$HC03_VC18 #22 Women over 16 who are employed 
   employmentData$femaleUnemployment = 
-    (employmentData$femaleLaborForce - employmentData$employedWomen) #15 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
+    (employmentData$femaleLaborForce - employmentData$employedWomen) #23 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
   
   # EMPLOYMENT BY OCCUPATION 
   
-  employmentData$occManagement = DP03$HC03_VC41 #16 Pecent of the civilian labor force employed in management, business, science, and arts occupations
-  employmentData$occService = DP03$HC03_VC42 #17 Percent of the civilian labor force employed in service occupations 
+  employmentData$occManagement = DP03$HC03_VC41 #24 Pecent of the civilian labor force employed in management, business, science, and arts occupations
+  employmentData$occService = DP03$HC03_VC42 #25 Percent of the civilian labor force employed in service occupations 
   
   # EMPLOYMENT BY INDUSTRY
   
-  employmentData$extractiveIndustries = DP03$HC03_VC50 #18 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
-  employmentData$constructionIndustry = DP03$HC03_VC51 #19 Percent of the civilian labor force employed in the construction industry
-  employmentData$manufacturingIndustry = DP03$HC03_VC52 #20 Percent of the civilian labor force employed in the manufacturing industry
-  employmentData$retailIndustry = DP03$HC03_VC54 #21 Percent of the civilian labor force employed in the retail trade industry
-  employmentData$professionalIndustries = DP03$HC03_VC58 #22 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
+  employmentData$extractiveIndustries = DP03$HC03_VC50 #26 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+  employmentData$constructionIndustry = DP03$HC03_VC51 #27 Percent of the civilian labor force employed in the construction industry
+  employmentData$manufacturingIndustry = DP03$HC03_VC52 #28 Percent of the civilian labor force employed in the manufacturing industry
+  employmentData$retailIndustry = DP03$HC03_VC54 #29 Percent of the civilian labor force employed in the retail trade industry
+  employmentData$professionalIndustries = DP03$HC03_VC58 #30 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
   
   # SUBSET DATA FRAME
   
