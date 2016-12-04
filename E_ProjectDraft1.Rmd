@@ -24,9 +24,8 @@ cNamesManip = function(cNames) {
   cNames = tolower(cNames)
   # Remove symbols in county names
   cNames = gsub("[ '%]", "", cNames)
-  cNames = gsub("<", "", cNames)
-  cNames = gsub(">", "", cNames)
   cNames = gsub("-", "", cNames)
+  cNames = gsub("\n", "", cNames)
   # Change & to and in county names
   cNames = gsub("&", "and", cNames)
   # Remove redundant characters from county names
@@ -515,7 +514,8 @@ load("GML.rda")
                      all = TRUE)
   
   # STATE & COUNTY NAMES
-  cNames = cNamesManip(as.character(censusData$GEO.display.label))
+  cNames = as.character(censusData$GEO.display.label)
+  cNames = gsub(' ', "", cNames)
   
   # SPLIT STATE NAMES AND COUNTY NAMES
 
@@ -523,11 +523,11 @@ load("GML.rda")
   
   # ADD COUNTY NAMES TO THE DATA FRAME
   
-  censusData$County = sapply(names, function(x) x[1])
+  censusData$County = cNamesManip(sapply(names, function(x) x[1]))
 
   # ADD STATE NAMES TO THE DATA FRAME
     
-  censusData$State = sapply(names, function(x) x[2])
+  censusData$State = tolower(gsub(" ", "", sapply(names, function(x) x[2])))
   
   names(censusData)[1] = "FIPS"
   censusData = censusData[, -2]
