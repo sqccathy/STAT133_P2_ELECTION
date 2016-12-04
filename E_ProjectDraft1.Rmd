@@ -429,8 +429,12 @@ load("GML.rda")
   # FRAME CONSTRUCTION
   
   familyData = DP02[ , c("GEO.id2", "GEO.display.label",
-                         "HC03_VC06", "HC03_VC10", 
-                         "HC03_VC12", "HC03_VC15",
+                         "HC03_VC06", "HC03_VC07",
+                         "HC03_VC08", "HC03_VC09",
+                         "HC03_VC10", "HC03_VC11",
+                         "HC03_VC12", "HC03_VC13",
+                         "HC03_VC14", "HC03_VC15",
+                         "HC03_VC17", "HC03_VC18",
                          "HC01_VC21", "HC03_VC36", 
                          "HC03_VC37")]
   
@@ -454,7 +458,7 @@ load("GML.rda")
   
   # SUBSET DATA FRAME 
   
-  familyData = familyData[ , c(1:2, 10:16)]
+  familyData = familyData[ , c(1:2, 18:32)]
   
   # MERGE FAMILY DATA WITH POPULATION DATA
   
