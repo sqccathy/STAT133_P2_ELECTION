@@ -392,14 +392,15 @@ load("GML.rda")
 ```
   
 ## Census data from the 2010 census (BY JOHN TOWEY)
-  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county. 
-  We then extract data from the second file on family structures within counties. We look at, e.g., families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
-  Then we extract employment data, including labor force participation and unemployent rates, female labor force participation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
-  After we extract the variabels, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
+
+The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county. 
+
 ```{r eval = createCensus}
   # POPULATION DATA
   
   B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
+
+  summary(B01003)
   
   # TOTAL POPULATION
   
@@ -410,6 +411,8 @@ load("GML.rda")
   totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
                                      "totalPop")] # Subset to exclude HD01_VD01
   
+  summary(totalPopFrame)
+  
   # WHITE POPULATION
   
   whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
@@ -417,6 +420,8 @@ load("GML.rda")
   whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
   whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
                                      "whitePop")] # Subset to exclude HD01_VD01
+  
+  summary(whitePopFrame)
   
   # MERGE INDIVIDUAL POPULATION DATA FILES
   
@@ -430,13 +435,23 @@ load("GML.rda")
   populationData$percentWhite = 
     100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population
   
-  # FAMILY STRUCTURE
+    summary(populationData)
+```
+
+The eda by summary statistics indicates that are three counties that have data on total population, but lack data on the number of white residents. 
+
+We then extract data from the second file on family structures within counties. We look at, e.g., families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
+
+```{r eval = createCensus}
+# FAMILY STRUCTURE
   
   DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+
+  summary(DP02)
   
   # FRAME CONSTRUCTION
   
-familyData = DP02[ , c("GEO.id2", "GEO.display.label",
+  familyData = DP02[ , c("GEO.id2", "GEO.display.label",
                          "HC03_VC06", "HC03_VC07", 
                          "HC03_VC08", "HC03_VC09",
                          "HC03_VC10", "HC03_VC11",
@@ -445,6 +460,8 @@ familyData = DP02[ , c("GEO.id2", "GEO.display.label",
                          "HC03_VC17", "HC03_VC18",
                          "HC01_VC21", "HC03_VC36", 
                          "HC03_VC37")]
+  
+  summary(familyData)
   
   # VARIABLES
   
@@ -468,16 +485,27 @@ familyData = DP02[ , c("GEO.id2", "GEO.display.label",
   
   familyData = familyData[ , c(1:2, 18:32)]
   
+  summary(familyData)
+  
   # MERGE FAMILY DATA WITH POPULATION DATA
   
   famPopData = merge(x = populationData, y = familyData, 
                      by = c("GEO.id2", "GEO.display.label"),
                      all = TRUE)
   
-  
+  summary(famPopData)
+```
+
+  The summary statistics indicate that 78 counties appear in the population data that are not in the family and household data. These turn out to all be in Puerto Rico. 
+
+  Then we extract employment data, including labor force participation and unemployent rates, female labor force participation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
+
+```{r eval = createCensus}
   # EMPLOYMENT DATA
   
   DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
+
+  summary(DP03)
   
   # FRAME CONSTRUCTION
   
@@ -488,6 +516,8 @@ familyData = DP02[ , c("GEO.id2", "GEO.display.label",
                              "HC03_VC50", "HC03_VC51",
                              "HC03_VC52", "HC03_VC54",
                              "HC03_VC58")]
+  
+  summary(employmentData)
   
   # VARIABLES
   
@@ -517,11 +547,21 @@ familyData = DP02[ , c("GEO.id2", "GEO.display.label",
   
   employmentData = employmentData[ , c(1:2, 14:25)]
   
+  summary(employmentData)
+```
+
+The exploratory data analysis with summary statistics indicates that there are no missing counties for the employment data. 
+
+After we extract the variables, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
+
+```{r eval = createCensus}
   # MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
   
   censusData = merge(x = famPopData, y = employmentData, 
                      by = c("GEO.id2", "GEO.display.label"),
                      all = TRUE)
+  
+  summary(censusData)
   
   # STATE & COUNTY NAMES
   cNames = as.character(censusData$GEO.display.label)
@@ -542,13 +582,16 @@ familyData = DP02[ , c("GEO.id2", "GEO.display.label",
   names(censusData)[1] = "FIPS"
   censusData = censusData[, -2]
   
+  summary(censusData)
+  
   save(censusData, file = "censusData.rda")
 ```
+
+There are no changes in the summary statistics by variable after merging the family and population data frame with the employment data frame. There are 3,217 counties represented. There are no missing counties for total population, but 3 missing for counts of white population (and by extension the percent of the population that is white). There are still the 78 counties missing family structure data, all from Puerto Rico. There are no missing observations for employment data. 
 
 ```{r}
   load("censusData.rda")
 ```
-
 
 ## Final Merge
 At last, we can merge all of the data into one data frame. 
