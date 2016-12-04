@@ -19,7 +19,7 @@ createCensus = FALSE
 ```{r}
 # Code by Menglu Cao
 
-cNamesManip = function(Cnames) {
+cNamesManip = function(cNames) {
   # Convert	all	county names to lower case
   cNames = tolower(cNames)
   # Remove symbols in county names
@@ -86,7 +86,7 @@ cTable = getNodeSet(pRoot,
           "//table/tr/td/a[@title='Accomack County, Virginia']/../../..")
 nrows = xmlSize(cTable[[1]])
   
-# Extract Values into	Character	Matrix
+# Extract Values into Character Matrix
 tableChar = do.call(rbind, sapply(1:nrows, function(i) {
                   strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
   
@@ -155,9 +155,9 @@ load("countyVotes2004.rda")
 
 ## Election Results in 2008 (BY Qichen Sun)
 ```{r eval = create2008}
-  library(xlsx)
-  wb = loadWorkbook("countyVotes2008.xlsx")
-  sheets = getSheets(wb)
+library(xlsx)
+wb = loadWorkbook("countyVotes2008.xlsx")
+sheets = getSheets(wb)
 ```  
   
   # Get state names
@@ -170,21 +170,20 @@ list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, heade
 ```  
   # Repeat state names to match the county names
 ```{r eval = create2008}
-  num_of_county = sapply(list, nrow)
-  sNames = rep(sNames, num_of_county)
+num_of_county = sapply(list, nrow)
+sNames = rep(sNames, num_of_county)
 ```
   # County names
 ```{r eval = create2008}
-  cNames = cNamesManip(unlist(sapply(list, function(x) x[[1]])))
+cNames = cNamesManip(unlist(sapply(list, function(x) x[[1]])))
 ```  
  
 ```{r eval = create2008}
-  
-  Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
-  
-  Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
-  
-  countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
+Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
+
+Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
+
+countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
 ```  
   ##countyVotes2008 = read.csv("countyVotes2008.csv")
   ##names(countyVotes2008)[c(4,5)] = c("ObamaVote2008", "MccainVote2008")
@@ -283,7 +282,7 @@ countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, Rom
 summary(countyVotes2012$ObamaVote2012)
 ```
   
-  It turns out that no NA exists and the values of these statistics of votes for Romney are acceptable, but the minimum of votes for Obama is only 5, which may be unreasonable. To check this, we need to find the row in which the number of votes for Obama is 5.
+  It turns out that no NA exists and the values of these statistics of votes for Romney are mostly acceptable, except for the minimal number of votes for Obama is only 5. To check it if makes sense, we need to find the row in which the number of votes for Obama is 5.
 ```{r eval = create2012}  
 countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
                 min(countyVotes2012$ObamaVote2012)), ]
@@ -295,7 +294,7 @@ countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
 summary(countyVotes2012$RomneyVote2012)
 ``` 
 
-  They make sense. Then we save the processed data frame as an intermediate file for efficiency consideration.
+  They also make sense. Then we save the processed data frame as an intermediate file for efficiency consideration.
 ```{r eval = create2012}
 save(countyVotes2012, file = "countyVotes2012.rda")
 ```
@@ -322,7 +321,7 @@ names(countyVotes2016)[c(3, 4)] = c("ClintonVote2016", "TrumpVote2016")
 summary(countyVotes2016$ClintonVote2016)
 ```
 
-  The minimum number of votes for Clinton is 4, which is unusually small. Check if it is reasonable.
+  The minimal number of votes for Clinton is 4, which is unusually small. Check if it is reasonable.
 ```{r eval = create2016}  
 countyVotes2016[which(countyVotes2016$ClintonVote2016 ==
                       min(countyVotes2016$ClintonVote2016)), ]
@@ -345,44 +344,38 @@ load("countyVotes2016.rda")
 
 ## GML data that contains the latitude and longitude for each county (By Menglu Cao)
 
-  The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing three variables in this data frame, namely the county names, the latitude and longitude for each county.
+  The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing four variables in this data frame, namely county names, state names, and the latitude and longitude for each county.
 ```{r eval = CreateGML} 
 require(XML)
 GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
 doc = xmlRoot(GML)
   
-# County names
+# Get county names
 cNames = cNamesManip(as.character(xpathSApply(doc, "//county/gml:name", xmlValue)))
   
-# State names
+# Get state names
 sNames = as.character(xpathSApply(doc, "//state/gml:name", xmlValue))
 sNames = tolower(gsub(" |\n", "", sNames))
-  
+ 
 # Get the number of counties in each state
 num_of_county = xpathSApply(doc, "//state", xmlSize) - 1
   
 # Repeat state names so that they correspond to counties
 sNames = rep(sNames, num_of_county)
   
-# Get the longitude and latitude of counties
-Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue))
+# Get the longitude and latitude of counties. Note that the coordinates have values in the millions, so we divide them by 10^6 to derive the right values 
+Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue)) / 10^6
   
-Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue))
-  
-# Create a data frame which contain the county names, the correspondent state names, and the latitude and longitude for each county
+Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue)) / 10^6
+```
+
+  With all the variables needed in position, we can then create a data frame, which contains county names, state names, and the latitude and longitude for each county.
+```{r eval = CreateGML} 
 GML_df = data.frame(County = cNames, State = sNames, Latitude, Longitude, stringsAsFactors = FALSE)
-  
-# Save the intermediate file for efficiency consideration
-save(GML_df, file = "GML.rda")
 ```
 
+  We'll then plot the counties by their coordinates to see if the result looks like the map of United States.
 ```{r}
-load("GML.rda")
-```
-
-  We'll then plot the counties by their coordinates to see if the result looks like the map of United States yet without Alaska and Hawaii.
-```{r}
-# Code by Menglu Cao
 require(ggplot2)
 ggplot(data = GML_df) +
   geom_point(mapping = aes(x = Longitude, y = Latitude, size = 0.2, alpha = 0.5)) +
@@ -392,7 +385,14 @@ ggplot(data = GML_df) +
   theme_bw()
 ```
 
-  The plot looks right, which means we have properly cleaned the data.
+  The plot looks right, which means we have properly cleaned the data. Then we save the intermediate file for efficiency consideration
+```{r eval = CreateGML} 
+save(GML_df, file = "GML.rda")
+```
+
+```{r}
+load("GML.rda")
+```
   
 ## Census data from the 2010 census (BY JOHN TOWEY)
   The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population from the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive a percentage of population that is white in each county. 
