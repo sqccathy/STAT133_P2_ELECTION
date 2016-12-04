@@ -390,6 +390,8 @@ load("GML.rda")
   
   B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
   
+  summary(B01003)
+  
   # TOTAL POPULATION
   
   totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
@@ -398,6 +400,8 @@ load("GML.rda")
   totalPopFrame$totalPop = totalPopFrame$HD01_VD01 #1 Generate total population variable
   totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
                                      "totalPop")] # Subset to exclude HD01_VD01
+                                     
+  summary(totalPopFrame)
   
   # WHITE POPULATION
   
@@ -406,6 +410,8 @@ load("GML.rda")
   whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
   whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
                                      "whitePop")] # Subset to exclude HD01_VD01
+                           
+  summary(whitePopFrame)
   
   # MERGE INDIVIDUAL POPULATION DATA FILES
   
@@ -417,10 +423,15 @@ load("GML.rda")
   ## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
   
   populationData$percentWhite = 
-    100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population
+    100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population\
+    
+    summary(populationData)
 ```
 
+The statistical summaries of these population data before and after the merge indicate that 3 counties have measures for total population, but not white population. We must keep this in mind for those analyses using the two variables for the white population.
+
   We then extract data from the second file on family structures within counties. We look at, e.g., families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
+  
 ```{r eval = create2016}
   # FAMILY STRUCTURE
   
@@ -468,6 +479,7 @@ load("GML.rda")
 ```
 
   Then we extract employment data, including labor force participation and unemployent rates, female labor force participation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
+  
 ```{r eval = create2016}  
   # EMPLOYMENT DATA
   
@@ -512,7 +524,8 @@ load("GML.rda")
   employmentData = employmentData[ , c(1:2, 14:25)]
 ```
 
-  After we extract the variabels, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
+  After we extract the variables, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
+  
 ```{r eval = create2016}
   # MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
   
