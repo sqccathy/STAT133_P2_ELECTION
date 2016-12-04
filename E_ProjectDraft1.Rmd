@@ -153,73 +153,64 @@ load("countyVotes2004.rda")
 
 
 ## Election Results in 2008 (BY Qichen Sun)
+For the election results in 2008, we have the excel file. First I use the r package xlsx to read the xlsx file and get the sheet names, which represents the state. Notice the first sheet is the summary of the states results, so I skip that sheet.Then I get a list containing 50 dataframes of the countys' election results for each state. By getting the number of rows in each dataframe in the list, I replicate the states names so that each county has the corresponding state in the final result. After that, I extract the county names, number of Obama votes and Mccain votes from the list. At last I put the above four variables into one dataframe. 
 ```{r eval = create2008}
 library(xlsx)
 wb = loadWorkbook("countyVotes2008.xlsx")
 sheets = getSheets(wb)
-```  
-  
-  # Get state names
-```{r eval = create2008}
+
+# Get state names
 sNames = tolower(gsub(" ", "", names(sheets)))[-1]
-```  
-  # Import xlsx file into a list
-```{r eval = create2008} 
+ 
+# Import xlsx file into a list.Notice the first sheet is the result of the state level, so I ignore it.
 list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
-```  
-  # Repeat state names to match the county names
-```{r eval = create2008}
+
+# Repeat state names to match the county names
 num_of_county = sapply(list, nrow)
 sNames = rep(sNames, num_of_county)
-```
-  # County names
-```{r eval = create2008}
-cNames = cNamesManip(unlist(sapply(list, function(x) x[[1]])))
-```  
- 
-```{r eval = create2008}
-Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
 
+# County names
+cNames = cNamesManip(unlist(sapply(list, function(x) x[[1]])))
+
+#get votes for Obama and Mccain from the list
+Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
 Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
 
+#combine county,state,obamavotes and Mccain votes into a dataframe.
 countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
 ```  
-  ##countyVotes2008 = read.csv("countyVotes2008.csv")
-  ##names(countyVotes2008)[c(4,5)] = c("ObamaVote2008", "MccainVote2008")
-  ##countyVotes2008 = countyVotes2008[, c(1,2,5,6)]
+
   
-  # EDA of the data
-  # Summary Statistics of number of votes for Obama
+Carry out EDA to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
 ```{r eval = create2008}
 summary(countyVotes2008$ObamaVote2008)
 ```
   
-  # Check which county's number of votes for Obama is not available 
+It turns out to have one NA.Check which county's number of votes for Obama is not available.
 ```{r eval = create2008}
 countyVotes2008[which(is.na(countyVotes2008$ObamaVote2008)), ]
 ```
 
   
-  # There is one row of irrelevant information in Mississipi. Drop it from the data frame.
+There is one row of irrelevant information in Mississipi. Drop it from the data frame.
 ```{r eval = create2008}
 countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
 ```  
   
-  # The minimum looks a bit bizarre. Check if it is reasonable.
+The minimum looks a bit bizarre. Check if it is reasonable.
 ```{r eval = create2008}
 countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
 ```  
 
-  # The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
+The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
   
-  # Summary statistics of number of votes for Mccain
+Summary statistics of number of votes for Mccain
 ```{r eval = create2008}
 summary(countyVotes2008$MccainVote2008)
 ```
-  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  #   67    2867    6243   18540   15850  826500
-  # They makes sense
-  
+They makes sense
+
+Then we save the processed data frame as an intermediate file for efficiency consideration.  
 ```{r eval = create2008}
 save(countyVotes2008, file = "countyVotes2008.rda")
 ```
