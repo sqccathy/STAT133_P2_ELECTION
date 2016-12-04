@@ -605,14 +605,31 @@ Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and
 Duncan Temple Lang and the CRAN team (2016b). RCurl: General Network
   (HTTP/FTP/...) Client Interface for R. R package version 1.95-4.8.
   https://CRAN.R-project.org/package=RCurl
+  
+The Guardian. (2016). 2008 Presidential Election Results by State and County. 
+  Available from https://www.theguardian.com/news/datablog/2009/mar/02/us-elections-2008
 
 Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
   Tabular Data. R package version 1.0.0.
   https://CRAN.R-project.org/package=readr
+  
+Nolan, Deborah. County Votes 2004. Retrieved from 
+  http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt
+  
+Nolan, Deborah. Counties, Longitude and Latitude. Retrieved from 
+  http://www.stat.berkeley.edu/~nolan/data/voteProject/counties.gml
+  
+Politico. (2016). 2012 Presidential Election Results. Available from 
+  http://www.politico.com/2012-election/results/map/#/President/2012/
 
 R Core Team (2016). R: A language and environment for statistical
   computing. R Foundation for Statistical Computing, Vienna, Austria. URL
   https://www.R-project.org/.
+  
+tonmcg. (2016). County-Level Election Results 12-16. Retrieved from     
+  https://github.com/tonmcg/County_Level_Election_Results_12-16/blob/master/2016_US_County_Level_Presidential_Results.csv
+  
+United States Census Bureau. (2016). American Fact-Finder. Available from  https://factfinder.census.gov/faces/nav/jsf/pages/searchresults.xhtml?refresh=t
 
 United States presidential election in Texas, 2008
-https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
