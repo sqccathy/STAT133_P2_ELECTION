@@ -46,7 +46,7 @@ require(readr)
 countyVotes2004 = read.delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", sep = "")
 ```
 
-Then add the state names and county names we get to the data frame, countyVotes2004, as new variables. Subset the data frame to extract the information we want, namely, county names, state names, number of votes for Bush and Kerry.
+  Then add the state names and county names we get to the data frame, countyVotes2004, as new variables. Subset the data frame to extract the information we want, namely, county names, state names, number of votes for Bush and Kerry.
 ```{r eval = create2004}
 # Split state names and county names
 names = strsplit(as.character(countyVotes2004$countyName), split = ",")
@@ -70,7 +70,7 @@ countyVotes2004 = countyVotes2004[, c(5, 4, 2, 3)]
 names(countyVotes2004)[c(3, 4)] = c("BushVote2004", "KerryVote2004")
 ```
 
-Notice that data of votes in Virginia are missing. So we scrape those data from HTML tables in Wikipedia and add them to the data frame, countyVotes2004. Names of counties and states should be converted to the same format mentioned above.  
+  Notice that data of votes in Virginia are missing. So we scrape those data from HTML tables in Wikipedia and add them to the data frame, countyVotes2004. Names of counties and states should be converted to the same format mentioned above.  
 ```{r eval = create2004}
 # Scrape data of votes in Virginia from HTML tables
 require(XML)
@@ -112,7 +112,7 @@ Virginia2004 = data.frame(County = cNames, State = sNames, BushVote2004, KerryVo
 countyVotes2004 = rbind(countyVotes2004, Virginia2004)
 ```
 
-Carry out EDA (Exploratory Data Analysis) to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
+  Carry out EDA (Exploratory Data Analysis) to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
 ```{r eval = create2004}
 summary(countyVotes2004$BushVote2004)
 ```
@@ -153,14 +153,15 @@ load("countyVotes2004.rda")
 
 
 ## Election Results in 2008 (BY Qichen Sun)
-For the election results in 2008, we have the excel file. First I use the r package xlsx to read the xlsx file and get the sheet names, which represents the state. Notice the first sheet is the summary of the states results, so I skip that sheet.Then I get a list containing 50 dataframes of the countys' election results for each state. By getting the number of rows in each dataframe in the list, I replicate the states names so that each county has the corresponding state in the final result. After that, I extract the county names, number of Obama votes and Mccain votes from the list. At last I put the above four variables into one dataframe. 
+
+  For the election results in 2008, we have the excel file. First we use the r package xlsx to read the xlsx file and get the sheet names, which represents the state. Notice the first sheet is the summary of the states results, so we skip that sheet. Then we get a list containing 50 dataframes of the countys' election results for each state. By getting the number of rows in each data frame in the list, we replicate the states names so that each county has the corresponding state in the final result. After that, we extract the county names, number of Obama votes and Mccain votes from the list. At last we put the above four variables into one data frame. 
 ```{r eval = create2008}
 library(xlsx)
 wb = loadWorkbook("countyVotes2008.xlsx")
 sheets = getSheets(wb)
 
 # Get state names
-sNames = tolower(gsub(" ", "", names(sheets)))[-1]
+sNames = tolower(gsub("[- ]", "", names(sheets)))[-1]
  
 # Import xlsx file into a list.Notice the first sheet is the result of the state level, so I ignore it.
 list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
@@ -179,36 +180,39 @@ Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
 #combine county,state,obamavotes and Mccain votes into a dataframe.
 countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
 ```  
-
   
-Carry out EDA to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
+  Carry out EDA to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
 ```{r eval = create2008}
 summary(countyVotes2008$ObamaVote2008)
 ```
   
-It turns out to have one NA.Check which county's number of votes for Obama is not available.
+  It turns out to have one NA. Check which county's number of votes for Obama is not available.
 ```{r eval = create2008}
 countyVotes2008[which(is.na(countyVotes2008$ObamaVote2008)), ]
 ```
 
-  
-There is one row of irrelevant information in Mississipi. Drop it from the data frame.
+  There is one row of irrelevant information in Mississipi. Drop it from the data frame.
 ```{r eval = create2008}
 countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
 ```  
   
-The minimum looks a bit bizarre. Check if it is reasonable.
+  The minimum looks a bit bizarre. Check if it is reasonable.
 ```{r eval = create2008}
 countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
 ```  
 
-The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
-  
-Summary statistics of number of votes for Mccain
+  The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
+  We'll carry out EDA again to see if the cleaning works successfully.
+```{r eval = create2008}
+summary(countyVotes2008$ObamaVote2008)
+```
+
+  The result shows the cleaning works fine.
+  Next, we check the summary statistics of the number of votes for Mccain.
 ```{r eval = create2008}
 summary(countyVotes2008$MccainVote2008)
 ```
-They makes sense
+  They makes sense.
 
 Then we save the processed data frame as an intermediate file for efficiency consideration.  
 ```{r eval = create2008}
@@ -216,12 +220,12 @@ save(countyVotes2008, file = "countyVotes2008.rda")
 ```
 
 ```{r}
-load("~/Downloads/countyVotes2008.rda")
+load("countyVotes2008.rda")
 ```
 
 ## Election Results in 2012 (By Jieni Wan)
 
-First read txt file into R to create a vector consisting of all the state names. The length of this vector is supposed to be 51 since there are 51 state names in the txt file. However, we find that there is no HTTP resource for Alaska, thus "Alaska" should be dropped from the vector.
+  First read txt file into R to create a vector consisting of all the state names. The length of this vector is supposed to be 51 since there are 51 state names in the txt file. However, we find that there is no HTTP resource for Alaska, thus "Alaska" should be dropped from the vector.
 ```{r eval = create2012}
 require(XML)
 # Get state names
@@ -233,7 +237,6 @@ sNames = sNames[sNames != "alaska"]
 ```
 
   Notice that the data of votes in 2012 are available at "http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/xxx.xml", where the "xxx" is replaced by the state names. Paste the state names with the same part among the websites to create a new vector containing all the websites we are going to use and then read these xml files into R.
-
   For each xml file, extract the information we want, i.e., the number of votes for Obama and Romney, together with the county names. Revise the format of county names as stipulated. What's more, since the state names do not exist in the xml files, we need a vector made up by state names to match the relative counties to create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012. 
 ```{r eval = create2012}
 # Create a vector consisting of all the websites we are going to use
@@ -261,7 +264,7 @@ RomneyVote2012 = as.numeric(gsub("[, ]", "", unlist(Romney)))
 cNames = cNamesManip(unlist(cNames))
   
 # Repeat state names to match county names
-sNames = rep(sNames, sapply(Obama, length))
+sNames = gsub("-", "", rep(sNames, sapply(Obama, length)))
   
 # Create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012
 countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, RomneyVote2012)
@@ -303,7 +306,7 @@ countyVotes2016$county_name = cNamesManip(countyVotes2016$county_name)
 # We keep the FIPS, in order to merge with other data sources; we also keep numbers of votes for Clinton and Trump, and the state abbreviations and county names for further data cleaning
 countyVotes2016 = countyVotes2016[, c(10, 9, 2, 3, 11)]
   
-names(countyVotes2016)[c(3, 4, 5)] = c("ClintonVote2016", "TrumpVote2016", "FIPS")
+names(countyVotes2016)[c(3, 4)] = c("ClintonVote2016", "TrumpVote2016")
 ```
 
   Next, we carry out EDA to determine what cleaning is necessary, by looking at the summary statistics of the number of votes for Clinton.
@@ -322,13 +325,6 @@ countyVotes2016[which(countyVotes2016$ClintonVote2016 ==
 ```{r eval = create2016}
 summary(countyVotes2016$TrumpVote2016)
 ```
-  
-  We decide to remove Alaska data, to keep consistent with other data.
-  
-```{r}
-countyVotes2016 = countyVotes2016[!countyVotes2016$state_abbr == "AK", ]
-```
-
   
   They make sense. Then we save the processed data frame as an intermediate file for efficiency consideration.
 ```{r eval = create2016}
@@ -391,63 +387,85 @@ save(GML_df, file = "GML.rda")
 load("GML.rda")
 ```
   
-## Census data from the 2010 census (BY JOHN TOWEY)
+## Census data from the 2010 census (BY JOHN TOWEY & Menglu Cao)
 
-The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data. We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county. 
-
+  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data.
+  We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county.
 ```{r eval = createCensus}
   # POPULATION DATA
   
   B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
-
-  summary(B01003)
   
-  # TOTAL POPULATION
+  #1 TOTAL POPULATION
   
   totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
                          c("GEO.id2", "GEO.display.label", 
-                           "HD01_VD01")] #Frame to extract total population
-  totalPopFrame$totalPop = totalPopFrame$HD01_VD01 #1 Generate total population variable
-  totalPopFrame = totalPopFrame[ , c("GEO.id2", "GEO.display.label", 
-                                     "totalPop")] # Subset to exclude HD01_VD01
-  
-  summary(totalPopFrame)
-  
-  # WHITE POPULATION
+                           "HD01_VD01")]# Frame to extract total population
+  names(totalPopFrame)[3] = "totalPop"
+
+  #2 WHITE POPULATION
   
   whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
-                         c("GEO.id2", "GEO.display.label", "HD01_VD01")] # Frame to extract white population
-  whitePopFrame$whitePop = whitePopFrame$HD01_VD01 #2 Generate white population variable
-  whitePopFrame = whitePopFrame[ , c("GEO.id2", "GEO.display.label", 
-                                     "whitePop")] # Subset to exclude HD01_VD01
-  
-  summary(whitePopFrame)
-  
+                         c("GEO.id2", "GEO.display.label", "HD01_VD01")] #2 Frame to extract white population
+  names(whitePopFrame)[3] = "whitePop"
+
   # MERGE INDIVIDUAL POPULATION DATA FILES
   
   populationData = merge(x = totalPopFrame, y = whitePopFrame, 
                          by = c("GEO.id2", "GEO.display.label"),
                          all = TRUE)
   
-  # GENERATE PERCENT WHITE VARIABLE
+  #3 GENERATE PERCENT WHITE VARIABLE
   ## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
   
   populationData$percentWhite = 
     100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population
+```
   
-    summary(populationData)
+  We'll then carry out EDA to check whether the data are clean or not by referring to summary statistics the variables.
+```{r eval = createCensus}
+  summary((populationData$totalPop))
+  summary((populationData$whitePop))
+```
+  
+  The EDA by summary statistics indicates that there are three counties that have data on total population, but lack data on the number of white residents. Check which counties' population of the white are not available.
+```{r eval = create2008}
+  populationData[which(is.na(populationData$whitePop)), ]
 ```
 
-The eda by summary statistics indicates that are three counties that have data on total population, but lack data on the number of white residents. 
+  We find that these counties are Jefferson at Mississippi, Buffalo and Shannon at South Dakota. By searching for their population data on Wikipedia, we find that as of the 2010 Census, they have 1092, 283 and 606. And the percents are 13.70%, 14.8% and 4.51%. We code them in.
+```{r}
+  populationData[which(is.na(populationData$whitePop)), ]$whitePop = c(1092, 283, 606)
+  populationData[which(is.na(populationData$percentWhite)), ]$percentWhite = c(13.70, 14.80, 4.51)
+```
 
-We then extract data from the second file on family structures within counties. We look at, e.g., families with children, rates of single parenthood, seniors living alone, rates of married and never married men, and the average size of families in counties.
+  We'll carry out EDA again to make sure that the cleaning is working. This time, we use the summary statistics for the whole populationData.
+```{r eval = createCensus}
+  summary(populationData)
+```
+
+  It works as expected. There is no NA any more.
+  We then extract data from the second file on family structures within counties. We are interested in the following variables:
+  - Percent of households that are families of any kind with children under 18
+  - Percent of households that are married couples
+  - Percent of households that are married couples with own children under 18
+  - Percent of households with a male householder and no wife present
+  - Percent households with a single male head of household with own children under 18
+  - Percent of households with a female householder and no husband present
+  - Percent of households with a single female head of household with own children under 18
+  - Percent of households that are non-family households
+  - Percent of households that are householders living alone
+  - Percent housholder living alone, 65 years old or over
+  - Percent households with at least one person under 18
+  - Percent households with at least one person over 65
+  - Average size of families
+  - Percent of males 15 and older who have never married (not inc. divorced or separated)
+  - Percent of males 15 and older who are married (currently married, not inc. separated)
 
 ```{r eval = createCensus}
 # FAMILY STRUCTURE
   
   DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
-
-  summary(DP02)
   
   # FRAME CONSTRUCTION
   
@@ -461,34 +479,24 @@ We then extract data from the second file on family structures within counties. 
                          "HC01_VC21", "HC03_VC36", 
                          "HC03_VC37")]
   
+  # CHANGE VARIABLE NAMES
+  
+  names(familyData)[3:17] = c("familiesWithKids", "marriedcouples",
+                              "marriedWithChildren", "maleHouseholder",
+                              "singleDads", "femaleHouseholder", "singleMoms",
+                              "nonFamilyHouseholds", "livingAlone",
+                              "seniorsLivingAlone", "youthHouseholds",
+                              "seniorHouseholds", "avgFamilySize", 
+                              "neverMarriedMen", "marriedMen")
+```
+
+  We'll look at the summary statistics as a whole.
+```{r eval = createCensus}
   summary(familyData)
+``` 
   
-  # VARIABLES
-  
-  familyData$familiesWithKids = DP02$HC03_VC06 #4 Percent of households that are families of any kind with own hildren under 18 
-  familyData$marriedcouples = DP02$HC03_VC07 #5 Percent of households that are married couples
-  familyData$marriedWithChildren = DP02$HC03_VC08 #6 Percent of households that are married couples with own children under 18
-  familyData$maleHouseholder = DP02$HC03_VC09 #7 Percent of households with a male householder and no wife present
-  familyData$singleDads = DP02$HC03_VC10 #8 Percent households with a single male head of household with own children under 18
-  familyData$femaleHouseholder = DP02$HC03_VC11 #9 Percent of households with a female householder and no husband present
-  familyData$singleMoms = DP02$HC03_VC12 #10 Percent of households with a single female head of household with own children under 18
-  familyData$nonFamilyHouseholds = DP02$HC03_VC13 #11 Percent of households that are non-family households
-  familyData$livingAlone = DP02$HC03_VC14 #12 Percent of households that are householders living alone
-  familyData$seniorsLivingAlone = DP02$HC03_VC15 #13 Percent housholder living alone, 65 years old or over
-  familyData$youthHouseholds = DP02$HC03_VC17 #14 Percent households with at least one person under 18
-  familyData$seniorHouseholds = DP02$HC03_VC18 #15 Percent households with at least one person over 65
-  familyData$avgFamilySize = DP02$HC01_VC21 #16 Average size of families
-  familyData$neverMarriedMen = DP02$HC03_VC36 #17 Percent of males 15 and older who have never married (not inc. divorced or separated)
-  familyData$marriedMen = DP02$HC03_VC37 #18 Percent of males 15 and older who are married (currently married, not inc. separated)
-  
-  # SUBSET DATA FRAME 
-  
-  familyData = familyData[ , c(1:2, 18:32)]
-  
-  summary(familyData)
-  
-  # MERGE FAMILY DATA WITH POPULATION DATA
-  
+  There is no missing values. Then we merge family data with population data.
+```{r eval = createCensus}
   famPopData = merge(x = populationData, y = familyData, 
                      by = c("GEO.id2", "GEO.display.label"),
                      all = TRUE)
@@ -496,19 +504,49 @@ We then extract data from the second file on family structures within counties. 
   summary(famPopData)
 ```
 
-  The summary statistics indicate that 78 counties appear in the population data that are not in the family and household data. These turn out to all be in Puerto Rico. 
+  The summary statistics indicate that 78 counties appear in the population data that are not in the family and household data.
+```{r eval = createCensus}
+  famPopData[!complete.cases(famPopData), ]
+```
+  
+  They turn out to all be in Puerto Rico. Counties in Puerto Rico have population information yet lack family information. We look back at the eletion results data and GML data and find out that they all don't have any information in Puerto Rico. Therefore, we've decided to drop them.
+```{r eval = createCensus}
+  famPopData = famPopData[!is.na(famPopData$familiesWithKids), ]
+```
 
-  Then we extract employment data, including labor force participation and unemployent rates, female labor force participation and employent rates--which we use to derive female unemployment rates--and employment by occupation and industry.
+  We'll carry out EDA again to make sure that the cleaning works as expected. 
+```{r eval = createCensus}
+  summary(famPopData)
+```
 
+  It works as expected. There is no NA any more.
+  Then we extract employment data. We are particularly interested in the following variables:
+  
+  GENERAL EMPLOYMENT:
+  - Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+  - Unemployment Rate (percent over 16 unemployed)
+  - Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+  - Women over 16 who are employed 
+  - Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
+  
+  EMPLOYMENT BY OCCUPATION: 
+  - Pecent of the civilian labor force employed in management, business, science, and arts occupations
+  - Percent of the civilian labor force employed in service occupations 
+  
+  EMPLOYMENT BY INDUSTRY:
+  
+  - Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+  - Percent of the civilian labor force employed in the construction industry
+  - Percent of the civilian labor force employed in the manufacturing industry
+  - Percent of the civilian labor force employed in the retail trade industry
+  - Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
 ```{r eval = createCensus}
   # EMPLOYMENT DATA
   
   DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
-
-  summary(DP03)
   
   # FRAME CONSTRUCTION
-  
+
   employmentData = DP03[ , c("GEO.id2", "GEO.display.label",
                              "HC03_VC06", "HC03_VC08", 
                              "HC03_VC17", "HC03_VC18",
@@ -517,102 +555,95 @@ We then extract data from the second file on family structures within counties. 
                              "HC03_VC52", "HC03_VC54",
                              "HC03_VC58")]
   
-  summary(employmentData)
+  # CHANGE VARIABLE NAMES
   
-  # VARIABLES
+  names(employmentData)[3:13] = c("laborForce", "unemployed",
+                                  "femaleLaborForce", "employedWomen",
+                                  "occManagement", "occService",
+                                  "extractiveIndustries",  "constructionIndustry",
+                                  "manufacturingIndustry", "retailIndustry",
+                                  "professionalIndustries")
   
-  # GENERAL EMPLOYMENT
-  
-  employmentData$laborForce = DP03$HC03_VC06 #19 Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
-  employmentData$unemployed = DP03$HC03_VC08 #20 Unemployment Rate (percent over 16 unemployed)
-  employmentData$femaleLaborForce = DP03$HC03_VC17 #21 Female labor force participation rate (percent of females over 16 who are employed or unemployed)
-  employmentData$employedWomen = DP03$HC03_VC18 #22 Women over 16 who are employed 
+  # ADD FEMALE UNEMPLOYMENT RATE
   employmentData$femaleUnemployment = 
-    (employmentData$femaleLaborForce - employmentData$employedWomen) #23 Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
-  
-  # EMPLOYMENT BY OCCUPATION 
-  
-  employmentData$occManagement = DP03$HC03_VC41 #24 Pecent of the civilian labor force employed in management, business, science, and arts occupations
-  employmentData$occService = DP03$HC03_VC42 #25 Percent of the civilian labor force employed in service occupations 
-  
-  # EMPLOYMENT BY INDUSTRY
-  
-  employmentData$extractiveIndustries = DP03$HC03_VC50 #26 Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
-  employmentData$constructionIndustry = DP03$HC03_VC51 #27 Percent of the civilian labor force employed in the construction industry
-  employmentData$manufacturingIndustry = DP03$HC03_VC52 #28 Percent of the civilian labor force employed in the manufacturing industry
-  employmentData$retailIndustry = DP03$HC03_VC54 #29 Percent of the civilian labor force employed in the retail trade industry
-  employmentData$professionalIndustries = DP03$HC03_VC58 #30 Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
-  
-  # SUBSET DATA FRAME
-  
-  employmentData = employmentData[ , c(1:2, 14:25)]
+      employmentData$femaleLaborForce - employmentData$employedWomen
   
   summary(employmentData)
 ```
 
-The exploratory data analysis with summary statistics indicates that there are no missing counties for the employment data. 
-
-After we extract the variables, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
-
+  The EDA with summary statistics indicates that there are no missing counties for the employment data. 
+  After we extract the variables, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data.
 ```{r eval = createCensus}
   # MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
   
   censusData = merge(x = famPopData, y = employmentData, 
                      by = c("GEO.id2", "GEO.display.label"),
                      all = TRUE)
-  
+
   summary(censusData)
-  
+```
+
+  We then carry out EDA. The summary statistics indicate that 78 counties have NAs.
+```{r eval = createCensus}
+  censusData[!complete.cases(censusData), ] 
+```
+
+  They again turn out to all be in Puerto Rico. So we drop them.
+```{r eval = createCensus}
+  censusData = censusData[!is.na(censusData$totalPop), ]
+```
+
+  We'll carry out EDA again to make sure that the cleaning works as expected. 
+```{r eval = createCensus}
+  summary(censusData)
+```
+
+  It works as expected. There is no NA any more.
+```{r eval = createCensus}
   # STATE & COUNTY NAMES
   cNames = as.character(censusData$GEO.display.label)
   cNames = gsub(' ', "", cNames)
   
   # SPLIT STATE NAMES AND COUNTY NAMES
-
   names = strsplit(cNames, split = ",")
   
   # ADD COUNTY NAMES TO THE DATA FRAME
-  
   censusData$County = cNamesManip(sapply(names, function(x) x[1]))
 
   # ADD STATE NAMES TO THE DATA FRAME
-    
   censusData$State = tolower(gsub(" ", "", sapply(names, function(x) x[2])))
   
+  # CHANGE FIPS NAME AND DROP GEO.display.label
   names(censusData)[1] = "FIPS"
   censusData = censusData[, -2]
   
   summary(censusData)
-  
-  save(censusData, file = "censusData.rda")
 ```
 
-There are no changes in the summary statistics by variable after merging the family and population data frame with the employment data frame. There are 3,217 counties represented. There are no missing counties for total population, but 3 missing for counts of white population (and by extension the percent of the population that is white). There are still the 78 counties missing family structure data, all from Puerto Rico. There are no missing observations for employment data. 
+  There are no changes in the summary statistics by variable after merging the family and population data frame with the employment data frame. There are 3,139 counties represented. 
+```{r eval = createCensus}
+  save(censusData, file = "censusData.rda")
+```
 
 ```{r}
   load("censusData.rda")
 ```
 
-## Final Merge
-At last, we can merge all of the data into one data frame. 
-#By Victor Choi
-First we merge 2008 and 2012
+## Final Merge (By Victor Choi)
+  At last, we can merge all of the data into one data frame. 
+  First we take the union merge of 2008 and 2012 election results, and compare it to other types of merges in order to determine if more	cleaning is needed.	
 ```{r}
-merge0812 = merge(countyVotes2012,countyVotes2008, by = c("County", "State"), all = TRUE)
-
+merge0812 = merge(countyVotes2012, countyVotes2008, by = c("County", "State"), all = TRUE)
 merge0812[which(!complete.cases(merge0812)), ]
 ```
 
-We find that the 2008 data does not contain data for District of Columbia, so we decide to code it in.
-We also find that 2012 data does not contain data for Alaska, so we decided to remove the row.
-
+  We find that the 2008 data does not contain data for District of Columbia, so we decide to code it in. We also find that 2012 data does not contain data for Alaska, so we decided to remove the row.
 ```{r}
 merge0812[which(merge0812$County == "districtofcolumbia"), c(5,6)] = c(245800, 17367)
-merge0812 = merge0812[(which(!merge0812$County %in% c("alaska"))), ]
-
-finalDataFrame = merge0812
+merge0812 = merge0812[merge0812$County != "alaska", ]
 ```
 
+  Next, we take the union merge of the GML data and the census data.
 ```{r}
 mergeGMLCensus = merge(GML_df, censusData, by.x = c("County", "State"), all = TRUE)
 ```
@@ -651,6 +682,7 @@ merge04GMLCensus16 = merge(countyVotes2016[, c("ClintonVote2016", "TrumpVote2016
 merge04GMLCensus16[!complete.cases(merge04GMLCensus16),]
 
 ```
+
 
 ## REFERENCES
 
