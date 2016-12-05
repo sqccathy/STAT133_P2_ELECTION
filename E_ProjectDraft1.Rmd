@@ -713,7 +713,17 @@ final[c(1434,1435,2696,2706,1515,2083,2431),c(40,41,42,43)]=final[c(1405,1406,24
 final = final[complete.cases(final),]
 ```
 
+At last, remove all the data and value in the environment except the final dataframe.
+```{r}
+list = ls()
+list = list[-28]
+rm(list = list)
+```
 
+The session info is as follows.
+```{r}
+sessionInfo()
+```
 ## REFERENCES
 
 Adrian A. Dragulescu (2014). xlsx: Read, write, format Excel 2007 and
