@@ -123,12 +123,12 @@ countyVotes2004[which(countyVotes2004$BushVote2004 ==
                       min(countyVotes2004$BushVote2004)), ]
 ```
 
-  The min occurs in Loving, Texas. According to Wikipedia, as of the 2010 census, its population was 82, making it the least populous county in the United States.
+  The min occurs in Loving, Texas. According to Wikipedia, the number is accurate.
 ```{r eval = create2004}  
 countyVotes2004[which(countyVotes2004$BushVote2004 ==                                                 max(countyVotes2004$BushVote2004)), ]
 ```
 
-  In addition, The max occurs in Los Angeles, California and the 2010 United States Census reported that Los Angeles had a population of 3,792,621. Thus the minimum being 54 and the maximum being 954764 make sense. 
+  In addition, The max occurs in Los Angeles, California. By double-checking via Wikipedia, it is right.
   Similarly, use summary function for the number of votes for Kerry and check whether the minimum and maximum are reasonable.
 ```{r eval = create2004} 
 # Summary statistics of number of votes for Mccain
@@ -201,7 +201,7 @@ countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
 countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
 ```  
 
-  The min occurs in King County, Texas. According to Wikipedia, as of the 2010 census, its population was 286, making it the second-least populous county in Texas and the third-least populous of any county in the United States. Plus, the data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
+  The min occurs in King County, Texas. The data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
   We'll carry out EDA again to see if the cleaning works successfully.
 ```{r eval = create2008}
 summary(countyVotes2008$ObamaVote2008)
@@ -281,7 +281,7 @@ countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
                 min(countyVotes2012$ObamaVote2012)), ]
 ```
   
-  The min occurs in King, Texas. It is acceptable due to previous explanation.
+  The min occurs in King, Texas. It is acceptable, since Wikipedia says the same.
   Then, we do the same for the number of votes for Romney.
 ```{r eval = create2012}
 summary(countyVotes2012$RomneyVote2012)
@@ -320,7 +320,7 @@ countyVotes2016[which(countyVotes2016$ClintonVote2016 ==
                       min(countyVotes2016$ClintonVote2016)), ]
 ```
   
-  The min occurs in King, Texas. It is acceptable due to the explanation above. 
+  The min occurs in King, Texas. It is acceptable, since Wikipedia has the same result. 
   We do the same to the number of votes for Trump.
 ```{r eval = create2016}
 summary(countyVotes2016$TrumpVote2016)
@@ -697,9 +697,6 @@ Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and
 Duncan Temple Lang and the CRAN team (2016b). RCurl: General Network
   (HTTP/FTP/...) Client Interface for R. R package version 1.95-4.8.
   https://CRAN.R-project.org/package=RCurl
-  
-The Guardian. (2016). 2008 Presidential Election Results by State and County. 
-  Available from https://www.theguardian.com/news/datablog/2009/mar/02/us-elections-2008
 
 Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
   Tabular Data. R package version 1.0.0.
@@ -714,6 +711,15 @@ Nolan, Deborah. Counties, Longitude and Latitude. Retrieved from
 Politico. (2016). 2012 Presidential Election Results. Available from 
   http://www.politico.com/2012-election/results/map/#/President/2012/
 
+Population Information of Jefferson County, Mississippi
+  https://en.wikipedia.org/wiki/Jefferson_County,_Mississippi
+  
+Population Information of Buffalo County, South Dakota
+  https://en.wikipedia.org/wiki/Buffalo_County,_South_Dakota
+  
+Population Information of Shannon County, South Dakota(aka Oglala Lakota County after 2015)
+ https://en.wikipedia.org/wiki/Oglala_Lakota_County,_South_Dakota
+
 R Core Team (2016). R: A language and environment for statistical
   computing. R Foundation for Statistical Computing, Vienna, Austria. URL
   https://www.R-project.org/.
@@ -723,5 +729,17 @@ tonmcg. (2016). County-Level Election Results 12-16. Retrieved from
   
 United States Census Bureau. (2016). American Fact-Finder. Available from  https://factfinder.census.gov/faces/nav/jsf/pages/searchresults.xhtml?refresh=t
 
-United States presidential election in Texas, 2008
+United States presidential election results in Texas, 2004
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_California,_2004
+  
+United States presidential election results in Texas, 2004
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2004
+  
+United States presidential election results in Texas, 2008
   https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
+  
+United States presidential election results in Texas, 2012
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2012
+  
+United States presidential election results in Texas, 2016
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2016
