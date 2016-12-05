@@ -629,7 +629,7 @@ load("GML.rda")
   load("censusData.rda")
 ```
 
-## Final Merge (By Victor Choi)
+## Final Merge (By Victor Choi,Jieni Wan & Qichen Sun)
   At last, we can merge all of the data into one data frame. 
   First we take the union merge of 2008 and 2012 election results, and compare it to other types of merges in order to determine if more	cleaning is needed.	
 ```{r}
@@ -648,12 +648,9 @@ merge0812 = merge0812[merge0812$County != "alaska", ]
 mergeGMLCensus = merge(GML_df, censusData, by.x = c("County", "State"), all = TRUE)
 ```
 
-After performing EDA, we find that there is no GML data on Puerto Rico, and decide to take it out. We also decide to take out Alaska for concerns about future data merges. Also, there is no census data for King, Loving, and Kenedy Texas, South Boston City, and Clifton Forge City, so we decide to take it out.
-GML data for Broomfield, Colorado is missing, so we decide to add it in. To remove the Tilde problem in Donaana, New Mexico, we decide to manually add the data in.
-
-The rest of the NAs are just from holes only in the Census Data. We decide to leave them in.
-
-
+  After performing EDA, we find that there is no GML data on Puerto Rico, and decide to take it out. We also decide to take out Alaska for concerns about future data merges. Also, there is no census data for King, Loving, and Kenedy Texas, South Boston City, and Clifton Forge City, so we decide to take it out.
+  GML data for Broomfield, Colorado is missing, so we decide to add it in. To remove the Tilde problem in Donaana, New Mexico, we decide to manually add the data in.
+  The rest of the NAs are just from holes only in the Census Data. We decide to leave them in.
 ```{r}
 mergeGMLCensus[!complete.cases(mergeGMLCensus),]
 mergeGMLCensus = mergeGMLCensus[(which(!mergeGMLCensus$State %in% c("puertorico", "alaska"))), ]
@@ -669,7 +666,6 @@ merge04GMLCensus = merge(mergeGMLCensus, countyVotes2004, by = c("County", "Stat
 ```
 
 We find that data is missing for Hawaii, so we decide to take it out.
-
 ```{r}
 merge04GMLCensus[!complete.cases(merge04GMLCensus),]
 merge04GMLCensus = merge04GMLCensus[(which(!merge04GMLCensus$County %in% c("king", "loving", "kenedy"))), ]
@@ -678,9 +674,43 @@ merge04GMLCensus = merge04GMLCensus[(which(!merge04GMLCensus$State == "hawaii"))
 
 Next we merge with 2016 data
 ```{r}
-merge04GMLCensus16 = merge(countyVotes2016[, c("ClintonVote2016", "TrumpVote2016", "FIPS")], merge04GMLCensus, by = "FIPS", all = TRUE)
-merge04GMLCensus16[!complete.cases(merge04GMLCensus16),]
+merge04GMLCensus16 = merge(countyVotes2016[, c("ClintonVote2016", "TrumpVote2016", "combined_fips")], merge04GMLCensus, by.x = "combined_fips",,by.y = "FIPS", all = TRUE)
+```
 
+We extracted the NAs in merge04GMLCensus. We fould there are many repeated rows for alaska in 2016, so we decided to skip those and skip all the missing values in census.
+```{r}
+nasof04GMLCensus = merge04GMLCensus16[!complete.cases(merge04GMLCensus16),]
+nasof04GMLCensus = nasof04GMLCensus[which(nasof04GMLCensus$County == "districtofcolumbia"|nasof04GMLCensus$County == "miamidade"|nasof04GMLCensus$County == "doñaana"),]
+```
+
+By referring to wikipedia, we find the missing data for the three county we kept in the previous step and added it to the merge04GMLCensus dataframe.
+```{r}
+nasof04GMLCensus[1,c("BushVote2004","KerryVote2004")] = c(21256,202970)
+nasof04GMLCensus[2,c("BushVote2004","KerryVote2004")] = c(361095,409732)  
+nasof04GMLCensus[3,c("Latitude","Longitude","BushVote2004","KerryVote2004")] = c(32.390928, -106.815844,29548,31762) 
+merge04GMLCensus16 = merge04GMLCensus16[complete.cases(merge04GMLCensus16),]
+merge04GMLCensus16 = rbind(merge04GMLCensus16,nasof04GMLCensus)
+```
+
+  Finally, we merge the result for 0812 with 04GMLCensus16 by county and state, and get NAs into a data frame.
+```{r}
+final = merge(merge04GMLCensus16,merge0812,by = c("County","State"),all = TRUE)
+NAs = final[!complete.cases(final),]
+```
+
+Actually there are some independent cities in US. They may share the same names with some counties in their states. For these independent cities, they have names like "xxxcity" in one data frame but are named as just "xxx" in another one, which explains the existence of some NAS. To solve the match problem, we specify the rows that contain such "xxxcity" names and those corresponding county names in the data frame, NAs.   
+```{r}
+city = c(36,273,305,457,483,606,651,721,803,883,910,988,1011,1180,1227,1298,1657,1740,1784,1786,1837,2076,2098,2107,2247,2321,2326,2381,2502,2671,2729,2914,3019,3079,3088)
+county = city-1
+final[city,c(40,41,42,43)]=final[county,c(40,41,42,43)]
+
+```
+
+```{r}
+
+final[c(1434,1435,2696,2706,1515,2083,2431),c(40,41,42,43)]=final[c(1405,1406,2498,2499,278,1788,2669),c(40,41,42,43)]
+
+final = final[complete.cases(final),]
 ```
 
 
