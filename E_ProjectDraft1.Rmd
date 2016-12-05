@@ -338,7 +338,7 @@ load("countyVotes2016.rda")
 ## GML data that contains the latitude and longitude for each county (By Menglu Cao)
 
   The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing four variables in this data frame, namely county names, state names, and the latitude and longitude for each county.
-```{r eval = CreateGML} 
+```{r eval = createGML} 
 require(XML)
 GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
 doc = xmlRoot(GML)
@@ -363,7 +363,7 @@ Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord
 ```
 
   With all the variables needed in position, we can then create a data frame, which contains county names, state names, and the latitude and longitude for each county.
-```{r eval = CreateGML} 
+```{r eval = createGML} 
 GML_df = data.frame(County = cNames, State = sNames, Latitude, Longitude, stringsAsFactors = FALSE)
 ```
 
@@ -379,7 +379,7 @@ ggplot(data = GML_df) +
 ```
 
   The plot looks right, which means we have properly cleaned the data. Then we save the intermediate file for efficiency consideration
-```{r eval = CreateGML} 
+```{r eval = createGML} 
 save(GML_df, file = "GML.rda")
 ```
 
