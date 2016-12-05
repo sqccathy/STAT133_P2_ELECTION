@@ -212,9 +212,9 @@ summary(countyVotes2008$ObamaVote2008)
 ```{r eval = create2008}
 summary(countyVotes2008$MccainVote2008)
 ```
-  They makes sense.
+  They make sense.
 
-Then we save the processed data frame as an intermediate file for efficiency consideration.  
+  Then we save the processed data frame as an intermediate file for efficiency consideration.  
 ```{r eval = create2008}
 save(countyVotes2008, file = "countyVotes2008.rda")
 ```
