@@ -1,10 +1,9 @@
 ---
 title: "KNN"
 author: "Jieni Wan"
-date: "2016Äê12ÔÂ6ÈÕ"
+date: "2016Ã„Ãª12Ã”Ã‚6ÃˆÃ•"
 output: html_document
 ---
-```{r}
 ```{r}
 load("D:/Berkeley/133/finalDataFrame.rda")
 ```
