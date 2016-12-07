@@ -13,7 +13,7 @@ load("D:/Berkeley/133/finalDataFrame.rda")
 final$change0408 = as.numeric((final$KerryVote2004 > final$BushVote2004) != (final$ObamaVote2008 > final$MccainVote2008))
 final$change0812 = as.numeric((final$ObamaVote2008 > final$MccainVote2008) != (final$ObamaVote2012 > final$RomneyVote2012))
 change1216 = (final$ObamaVote2012 > final$RomneyVote2012) != (final$ClintonVote2016 > final$TrumpVote2016)
-final = final[, -c(1:12)]
+final = final[, -c(1, 2, 5:12)]
 
 ```
 
