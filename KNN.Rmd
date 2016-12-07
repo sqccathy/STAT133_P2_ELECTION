@@ -1,0 +1,77 @@
+---
+title: "KNN"
+author: "Jieni Wan"
+date: "2016Äê12ÔÂ6ÈÕ"
+output: html_document
+---
+```{r}
+```{r}
+load("D:/Berkeley/133/finalDataFrame.rda")
+```
+
+```{r}
+# democratic T republican F
+final$change0408 = as.numeric((final$KerryVote2004 > final$BushVote2004) != (final$ObamaVote2008 > final$MccainVote2008))
+final$change0812 = as.numeric((final$ObamaVote2008 > final$MccainVote2008) != (final$ObamaVote2012 > final$RomneyVote2012))
+change1216 = (final$ObamaVote2012 > final$RomneyVote2012) != (final$ClintonVote2016 > final$TrumpVote2016)
+final = final[, -c(1:12)]
+
+```
+
+
+```{r}
+nTotal = nrow(final)
+chooseTest = sample(nTotal, 404)
+finalTest = final[chooseTest, -32]
+finalTrain = final[-chooseTest, -32]
+cl = final[-chooseTest, 32]
+```
+
+```{r}
+set.seed(12344321)
+permuteIndices = sample(2700)
+v = 3
+folds = matrix(permuteIndices, ncol = 3)
+```
+
+```{r}
+k = 1:30
+preds = matrix(nrow = 2700, ncol = length(k))
+library(class)
+for (i in 1:v) {
+  trainFold = as.vector(folds[, -i])
+  testFold = folds[, i]
+  for (j in 1:length(k)) {
+    preds[testFold, j] = knn(finalTrain[trainFold, ], finalTrain[testFold, ], cl[trainFold], j)
+  }
+}
+```
+
+```{r}
+cvRates = apply(preds, 2, function(oneSet) {
+  oneSet[oneSet == 1] = 0
+  oneSet[oneSet == 2] = 1
+  sum(cl == oneSet)/2700
+})
+```
+
+```{r}
+which.max(cvRates)
+library(ggplot2)
+cvRes = data.frame(k, cvRates)
+ggplot(data = cvRes, aes(x = k, y = cvRates)) +
+  geom_line() + 
+  labs(x = "k value", y = "Classification Rate")
+```
+
+```{r}
+kChoice = cvRes[which.max(cvRates), 1]
+testPreds = knn(finalTrain, finalTest, cl, kChoice)   
+classRate = sum((testPreds-1) == final[chooseTest, 32]) / 
+  nrow(finalTest)
+
+classRate
+```
+
+
+
