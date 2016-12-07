@@ -1,0 +1,860 @@
+---
+title: "2016 Presidential Election Debrief Project - Data Wrangling"
+output: html_document
+author: Menglu Cao, Jieni Wan, Qichen Sun, John Towey, Victor Choi
+---
+  
+  This report focuses on data wrangling. First we acquire and clean presidential election results data from 2004 to 2016, geographic data and census data in 2010, all on county level. Note that these data are of different formats, and are from different sources. Our goal here is to create one comprehensive data frame based on these data. When we merge them together, again, we'll need to perform data cleaning.
+  
+  The following set up helps us control which code is run. We can create each data frame once and save the data frame in an rda file. Then in the future, we do not recreate this file but load only the rda file.
+```{r}
+create2004 = FALSE
+create2008 = FALSE
+create2012 = FALSE
+create2016 = FALSE
+createGML = FALSE
+createCensus = FALSE
+merge = FALSE
+```
+
+### Data Acquisition and Cleaning
+
+  For convenience in final merging, we create a helper function to apply regular expressions and string manipulations to county names so that they have the same format.
+```{r}
+# Code by Menglu Cao
+
+cNamesManip = function(cNames) {
+  # Convert	all	county names to lower case
+  cNames = tolower(cNames)
+  # Remove symbols in county names
+  cNames = gsub("[ '%]", "", cNames)
+  cNames = gsub("-", "", cNames)
+  cNames = gsub("\n", "", cNames)
+  # Change & to and in county names
+  cNames = gsub("&", "and", cNames)
+  # Remove redundant characters from county names
+  cNames = gsub("county|parish|reporting|municipality|municipio|censusarea", "", cNames)
+  # Eliminate	.	from county names
+  cNames = gsub("\\.", "", cNames)
+  # Remove digits
+  cNames = gsub("[0-9]", "", cNames)
+}
+```
+
+## Election Results in 2004 (By Menglu Cao)
+
+  First, read the txt file of election results in 2004 into R.
+```{r eval = create2004}
+require(readr)
+countyVotes2004 = read.delim("http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt", sep = "")
+```
+
+  Then add the state names and county names we get to the data frame, countyVotes2004, as new variables. Subset the data frame to extract the information we want, namely, county names, state names, number of votes for Bush and Kerry.
+```{r eval = create2004}
+# Split state names and county names
+names = strsplit(as.character(countyVotes2004$countyName), split = ",")
+  
+# State names
+sNames = sapply(names, function(x) x[1])
+  
+# Add manipulated state names to the data frame
+countyVotes2004$State = tolower(gsub(" ", "", sNames))
+  
+# County names
+cNames = sapply(names, function(x) x[2])
+  
+# Add county names to the data frame
+countyVotes2004$County = cNamesManip(cNames)
+  
+# Subset countyVotes2004, such that it consists of 4 variables: county names, state names, number of votes for Bush and Kerry
+countyVotes2004 = countyVotes2004[, c(5, 4, 2, 3)]
+  
+# Change variable names in the data frame
+names(countyVotes2004)[c(3, 4)] = c("BushVote2004", "KerryVote2004")
+```
+
+  Notice that data of votes in Virginia are missing. So we scrape those data from HTML tables in Wikipedia and add them to the data frame, countyVotes2004. Names of counties and states should be converted to the same format mentioned above.  
+```{r eval = create2004}
+# Scrape data of votes in Virginia from HTML tables
+require(XML)
+require(RCurl)
+wikiURL = "https://en.wikipedia.org/wiki/United_States_presidential_election_in_Virginia,_2004"
+pageContents = getURLContent(wikiURL)
+  
+# Set up XPath to find the table
+pDoc = htmlParse(pageContents)
+pRoot = xmlRoot(pDoc)
+cTable = getNodeSet(pRoot, 
+          "//table/tr/td/a[@title='Accomack County, Virginia']/../../..")
+nrows = xmlSize(cTable[[1]])
+  
+# Extract Values into Character Matrix
+tableChar = do.call(rbind, sapply(1:nrows, function(i) {
+                  strsplit(xmlValue(cTable[[1]][[i]]), "\n")}))
+  
+# Names of counties and the states they belong in Virginia
+names = tableChar[-1, 1]
+counties = names[!grepl(",", names)]
+independentCity = c(sapply(strsplit(names[grepl(",", names)], split = ","), 
+                                    function(x) paste0(x[1], "city")))
+  
+# County names
+cNames = cNamesManip(c(counties, independentCity))
+  
+# Create a character vector consisting of "virginia"
+sNames = rep("virginia", length(names))
+
+# Number of votes for Bush & Kerry
+BushVote2004 = as.numeric(gsub(",", "", tableChar[-1, 5]))
+KerryVote2004 = as.numeric(gsub(",", "", tableChar[-1, 3]))
+  
+# Create a data frame for Virginia
+Virginia2004 = data.frame(County = cNames, State = sNames, BushVote2004, KerryVote2004)
+  
+# Add data of votes in Virginia to countyVotes2004
+countyVotes2004 = rbind(countyVotes2004, Virginia2004)
+
+# Remove data frames that we don't need any more
+rm(Virginia2004)
+```
+
+  Carry out EDA (Exploratory Data Analysis) to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
+```{r eval = create2004}
+summary(countyVotes2004$BushVote2004)
+```
+  
+  It turns out that the minimum of votes for Bush is only 65 and the maximum is 1670341, which may not be reasonable. Therefore we find the two rows corresponding to the min and max votes respectively to see the specific locations where the min and max occur. 
+```{r eval = create2004}  
+countyVotes2004[which(countyVotes2004$BushVote2004 ==
+                      min(countyVotes2004$BushVote2004)), ]
+```
+
+  The min occurs in Loving, Texas. According to Wikipedia, the number is accurate.
+```{r eval = create2004}  
+countyVotes2004[which(countyVotes2004$BushVote2004 ==                                                 max(countyVotes2004$BushVote2004)), ]
+```
+
+  In addition, The max occurs in Los Angeles, California. By double-checking via Wikipedia, it is right.
+  Similarly, use summary function for the number of votes for Kerry and check whether the minimum and maximum are reasonable.
+```{r eval = create2004} 
+# Summary statistics of number of votes for Mccain
+summary(countyVotes2004$KerryVote2004)
+  
+# Check if the minimum and maximum are reasonable
+countyVotes2004[which(countyVotes2004$KerryVote2004 ==
+                      min(countyVotes2004$KerryVote2004)), ]
+
+countyVotes2004[which(countyVotes2004$KerryVote2004 ==                                                max(countyVotes2004$KerryVote2004)), ]
+```
+  
+  The places where the min and max occur are again Loving in Texas and Los Angeles in California, respectively. So they are reasonable as well.
+  Then we save the processed data frame as an intermediate file for efficiency consideration.
+```{r eval = create2004}
+save(countyVotes2004, file = "countyVotes2004.rda")
+```
+
+```{r}
+load("countyVotes2004.rda")
+```
+
+
+## Election Results in 2008 (BY Qichen Sun)
+
+  For the election results in 2008, we have the excel file. First we use the r package xlsx to read the xlsx file and get the sheet names, which represents the state. Notice the first sheet is the summary of the states results, so we skip that sheet. Then we get a list containing 50 dataframes of the countys' election results for each state. By getting the number of rows in each data frame in the list, we replicate the states names so that each county has the corresponding state in the final result. After that, we extract the county names, number of Obama votes and Mccain votes from the list. At last we put the above four variables into one data frame. 
+```{r eval = create2008}
+library(xlsx)
+wb = loadWorkbook("countyVotes2008.xlsx")
+sheets = getSheets(wb)
+
+# Get state names
+sNames = tolower(gsub("[- ]", "", names(sheets)))[-1]
+ 
+# Import xlsx file into a list. Notice the first sheet is the result of the state level, so we ignore it.
+list = lapply(seq(2, 51), function(x) read.xlsx("countyVotes2008.xlsx", x, header = FALSE)[-1, ])
+
+# Repeat state names to match the county names
+num_of_county = sapply(list, nrow)
+sNames = rep(sNames, num_of_county)
+
+# County names
+cNames = cNamesManip(unlist(sapply(list, function(x) x[[1]])))
+
+#get votes for Obama and Mccain from the list
+Obama = as.numeric(as.character(unlist(sapply(list, function(x) x[[4]]))))
+Mccain = as.numeric(as.character(unlist(sapply(list, function(x) x[[5]]))))
+
+#combine county,state, obamavotes and Mccain votes into a dataframe.
+countyVotes2008 = data.frame(County = cNames, State = sNames, ObamaVote2008 = Obama, MccainVote2008 = Mccain)
+```  
+  
+  Carry out EDA to check whether the data are clean or not by referring to summary statistics of the numeber of votes for the two candidates.
+```{r eval = create2008}
+summary(countyVotes2008$ObamaVote2008)
+```
+  
+  It turns out to have one NA. Check which county's number of votes for Obama is not available.
+```{r eval = create2008}
+countyVotes2008[which(is.na(countyVotes2008$ObamaVote2008)), ]
+```
+
+  There is one row of irrelevant information in Mississipi. Drop it from the data frame.
+```{r eval = create2008}
+countyVotes2008 = countyVotes2008[!is.na(countyVotes2008$ObamaVote2008), ]
+```  
+  
+  The minimum looks a bit bizarre. Check if it is reasonable.
+```{r eval = create2008}
+countyVotes2008[which(countyVotes2008$ObamaVote2008 == 8), ]
+```  
+
+  The min occurs in King County, Texas. The data on Wikipedia shows its vote for Obama is indeed 8. Thus the minimum being 8 makes sense.
+  We'll carry out EDA again to see if the cleaning works successfully.
+```{r eval = create2008}
+summary(countyVotes2008$ObamaVote2008)
+```
+
+  The result shows the cleaning works fine.
+  Next, we check the summary statistics of the number of votes for Mccain.
+```{r eval = create2008}
+summary(countyVotes2008$MccainVote2008)
+```
+  They make sense.
+
+  Then we save the processed data frame as an intermediate file for efficiency consideration.  
+```{r eval = create2008}
+save(countyVotes2008, file = "countyVotes2008.rda")
+```
+
+```{r}
+load("countyVotes2008.rda")
+```
+
+## Election Results in 2012 (By Jieni Wan)
+
+  First read txt file into R to create a vector consisting of all the state names. The length of this vector is supposed to be 51 since there are 51 state names in the txt file. However, we find that there is no HTTP resource for Alaska, thus "Alaska" should be dropped from the vector.
+```{r eval = create2012}
+require(XML)
+# Get state names
+sNames_df = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/stateNames.txt")
+  sNames = tolower(gsub(" ", "", as.vector(sNames_df$states)))
+  
+# Drop Alaska from sNames
+sNames = sNames[sNames != "alaska"]
+```
+
+  Notice that the data of votes in 2012 are available at "http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/xxx.xml", where the "xxx" is replaced by the state names. Paste the state names with the same part among the websites to create a new vector containing all the websites we are going to use and then read these xml files into R.
+  For each xml file, extract the information we want, i.e., the number of votes for Obama and Romney, together with the county names. Revise the format of county names as stipulated. What's more, since the state names do not exist in the xml files, we need a vector made up by state names to match the relative counties to create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012. 
+```{r eval = create2012}
+# Create a vector consisting of all the websites we are going to use
+xml2012 = paste0("http://www.stat.berkeley.edu/users/nolan/data/voteProject/countyVotes2012/", sNames, ".xml")
+  
+# Get a list of the xml file of each website
+xmlList = lapply(xml2012, xmlParse)
+  
+# Extract the desired information from each xml file
+Obama = lapply(xmlList, function(x) {
+                        xpathSApply(xmlRoot(x), "//abbr[@title =    'Democratic']/../../td[@class='results-popular']", xmlValue)
+  })
+Romney = lapply(xmlList, function(x) {
+                         xpathSApply(xmlRoot(x), "//abbr[@title = 'Republican']/../../td[@class='results-popular']", xmlValue)
+  })
+cNames = lapply(xmlList, function(x) {
+    xpathSApply(xmlRoot(x), "/table/tbody/tr/th[@class = 'results-county']", xmlValue)
+  })
+  
+# Convert the lists to numeric vectors
+ObamaVote2012 = as.numeric(gsub("[, ]", "", unlist(Obama)))
+RomneyVote2012 = as.numeric(gsub("[, ]", "", unlist(Romney)))
+  
+# County names
+cNames = cNamesManip(unlist(cNames))
+  
+# Repeat state names to match county names
+sNames = gsub("-", "", rep(sNames, sapply(Obama, length)))
+  
+# Create a data frame with four columns, namely County, State, ObamaVote2012 and RomneyVote2012
+countyVotes2012 = data.frame(County = cNames, State = sNames, ObamaVote2012, RomneyVote2012)
+
+# Remove unneeded data
+rm(xmlList, Obama, Romney, ObamaVote2012, RomneyVote2012)
+```
+  
+  Next, we carry out EDA to determine what cleaning is necessary, by looking at the summary statistics of the number of votes for Obama.
+```{r eval = create2012}
+summary(countyVotes2012$ObamaVote2012)
+```
+  
+  It turns out that no NA exists and the values of these statistics of votes for Romney are mostly acceptable, except for the minimal number of votes for Obama is only 5. To check it if makes sense, we need to find the row in which the number of votes for Obama is 5.
+```{r eval = create2012}  
+countyVotes2012[which(countyVotes2012$ObamaVote2012 ==
+                min(countyVotes2012$ObamaVote2012)), ]
+```
+  
+  The min occurs in King, Texas. It is acceptable, since Wikipedia says the same.
+  Then, we do the same for the number of votes for Romney.
+```{r eval = create2012}
+summary(countyVotes2012$RomneyVote2012)
+``` 
+
+  They also make sense. Then we save the processed data frame as an intermediate file for efficiency consideration.
+```{r eval = create2012}
+save(countyVotes2012, file = "countyVotes2012.rda")
+```
+
+```{r}
+load("countyVotes2012.rda")
+```
+
+## Election Results in 2016 (By Victor Choi)
+```{r eval = create2016}
+require(readr)
+countyVotes2016 = read.csv("http://www.stat.berkeley.edu/users/nolan/data/voteProject/2016_US_County_Level_Presidential_Results.csv")
+  
+countyVotes2016$county_name = cNamesManip(countyVotes2016$county_name)
+  
+# We keep the FIPS, in order to merge with other data sources; we also keep numbers of votes for Clinton and Trump, and the state abbreviations and county names for further data cleaning
+countyVotes2016 = countyVotes2016[, c(10, 9, 2, 3, 11)]
+  
+names(countyVotes2016)[c(3, 4)] = c("ClintonVote2016", "TrumpVote2016")
+```
+
+  Next, we carry out EDA to determine what cleaning is necessary, by looking at the summary statistics of the number of votes for Clinton.
+```{r eval = create2016}
+summary(countyVotes2016$ClintonVote2016)
+```
+
+  The minimal number of votes for Clinton is 4, which is unusually small. Check if it is reasonable.
+```{r eval = create2016}  
+countyVotes2016[which(countyVotes2016$ClintonVote2016 ==
+                      min(countyVotes2016$ClintonVote2016)), ]
+```
+  
+  The min occurs in King, Texas. It is acceptable, since Wikipedia has the same result. 
+  We do the same to the number of votes for Trump.
+```{r eval = create2016}
+summary(countyVotes2016$TrumpVote2016)
+```
+  
+  They make sense. Then we save the processed data frame as an intermediate file for efficiency consideration.
+```{r eval = create2016}
+save(countyVotes2016, file = "countyVotes2016.rda")
+```
+
+```{r}
+load("countyVotes2016.rda")
+```
+
+## GML data that contains the latitude and longitude for each county (By Menglu Cao)
+
+  The purpose of GML data is to make an informative map describing the election results on county levels. We will be needing four variables in this data frame, namely county names, state names, and the latitude and longitude for each county.
+```{r eval = createGML} 
+require(XML)
+GML = xmlParse("http://www.stat.berkeley.edu/users/nolan/data/voteProject/counties.gml")
+doc = xmlRoot(GML)
+  
+# Get county names
+cNames = cNamesManip(as.character(xpathSApply(doc, "//county/gml:name", xmlValue)))
+  
+# Get state names
+sNames = as.character(xpathSApply(doc, "//state/gml:name", xmlValue))
+sNames = tolower(gsub(" |\n", "", sNames))
+ 
+# Get the number of counties in each state
+num_of_county = xpathSApply(doc, "//state", xmlSize) - 1
+  
+# Repeat state names so that they correspond to counties
+sNames = rep(sNames, num_of_county)
+  
+# Get the longitude and latitude of counties. Note that the coordinates have values in the millions, so we divide them by 10^6 to derive the right values 
+Longitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:X", xmlValue)) / 10^6
+  
+Latitude = as.numeric(xpathSApply(doc, "/doc/state/county/gml:location/gml:coord/gml:Y", xmlValue)) / 10^6
+```
+
+  With all the variables needed in position, we can then create a data frame, which contains county names, state names, and the latitude and longitude for each county. Then we remove unneeded variables.
+```{r eval = createGML} 
+GML_df = data.frame(County = cNames, State = sNames, Latitude, Longitude, stringsAsFactors = FALSE)
+
+rm(Longitude, Latitude, num_of_county)
+```
+
+  We'll then plot the counties by their coordinates to see if the result looks like the map of United States.
+```{r}
+load("GML.rda")
+require(ggplot2)
+ggplot(data = GML_df) +
+  geom_point(mapping = aes(x = Longitude, y = Latitude, size = 0.2, alpha = 0.5)) +
+  scale_x_continuous(name = "Longitude") +
+  scale_y_continuous(name = "Latitude") +
+  labs(title = "Map of counties in the United States") +
+  theme_bw()
+```
+
+  The plot looks right, which means we have properly cleaned the data. Then we save the intermediate file for efficiency consideration
+```{r eval = createGML} 
+save(GML_df, file = "GML.rda")
+```
+
+## Census data from the 2010 census (BY JOHN TOWEY & Menglu Cao)
+
+  The census data required that we merge three files together, one with population and race information, one with data on households and family structure, and a third with employment data.
+  We first extract the count of total population and the count of people identitfying as white. We do not extract data on the count of individuals identifying as black, because there are too many counties missing this data. Using the total population and the count of white indidividuals, we derive the percent of population that is white in each county.
+```{r eval = createCensus}
+# POPULATION DATA
+  
+B01003 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/B01003.csv")
+  
+#1 TOTAL POPULATION
+  
+totalPopFrame = B01003[B01003$POPGROUP.id == 1, 
+                       c("GEO.id2", "GEO.display.label", 
+                         "HD01_VD01")]# Frame to extract total population
+names(totalPopFrame)[3] = "totalPop"
+
+#2 WHITE POPULATION
+  
+whitePopFrame = B01003[B01003$POPGROUP.id == 2, 
+                         c("GEO.id2", "GEO.display.label", "HD01_VD01")] #2 Frame to extract white population
+names(whitePopFrame)[3] = "whitePop"
+
+# MERGE INDIVIDUAL POPULATION DATA FILES
+  
+populationData = merge(x = totalPopFrame, y = whitePopFrame, 
+                      by = c("GEO.id2", "GEO.display.label"),
+                      all = TRUE)
+  
+# GENERATE PERCENT WHITE VARIABLE
+## (There are too many missing counties for a black proportion variable, but this allows for comparisons between white/non-white, at least.)
+  
+populationData$percentWhite = 100 * (populationData$whitePop / populationData$totalPop) #3 White population as a percent of total population
+
+# REMOVE UNNEEDED DATA FRAMES
+
+rm(B01003, totalPopFrame, whitePopFrame)
+```
+  
+  We'll then carry out EDA to check whether the data are clean or not by referring to summary statistics the variables.
+```{r eval = createCensus}
+summary((populationData$totalPop))
+summary((populationData$whitePop))
+```
+  
+  The EDA by summary statistics indicates that there are three counties that have data on total population, but lack data on the number of white residents. Check which counties' population of the white are not available.
+```{r eval = createCensus}
+populationData[which(is.na(populationData$whitePop)), ]
+```
+
+  We find that these counties are Jefferson at Mississippi, Buffalo and Shannon at South Dakota. By searching for their population data on Wikipedia, we find that as of the 2010 Census, they have 1092, 283 and 606. And the percents are 13.70%, 14.8% and 4.51%. We code them in.
+```{r eval = createCensus}
+populationData[which(is.na(populationData$whitePop)), ]$whitePop = c(1092, 283, 606)
+populationData[which(is.na(populationData$percentWhite)), ]$percentWhite = c(13.70, 14.80, 4.51)
+```
+
+  We'll carry out EDA again to make sure that the cleaning is working. This time, we use the summary statistics for the whole populationData.
+```{r eval = createCensus}
+summary(populationData)
+```
+
+  It works as expected. There is no NA any more.
+  We then extract data from the second file on family structures within counties. We are interested in the following variables:
+  - Percent of households that are families of any kind with children under 18
+  - Percent of households that are married couples
+  - Percent of households that are married couples with own children under 18
+  - Percent of households with a male householder and no wife present
+  - Percent households with a single male head of household with own children under 18
+  - Percent of households with a female householder and no husband present
+  - Percent of households with a single female head of household with own children under 18
+  - Percent of households that are non-family households
+  - Percent of households that are householders living alone
+  - Percent housholder living alone, 65 years old or over
+  - Percent households with at least one person under 18
+  - Percent households with at least one person over 65
+  - Average size of families
+  - Percent of males 15 and older who have never married (not inc. divorced or separated)
+  - Percent of males 15 and older who are married (currently married, not inc. separated)
+
+```{r eval = createCensus}
+# FAMILY STRUCTURE
+  
+DP02 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP02.csv")
+  
+# FRAME CONSTRUCTION
+  
+familyData = DP02[ , c("GEO.id2", "GEO.display.label",
+                         "HC03_VC06", "HC03_VC07", 
+                         "HC03_VC08", "HC03_VC09",
+                         "HC03_VC10", "HC03_VC11",
+                         "HC03_VC12", "HC03_VC13",
+                         "HC03_VC14", "HC03_VC15", 
+                         "HC03_VC17", "HC03_VC18",
+                         "HC01_VC21", "HC03_VC36", 
+                         "HC03_VC37")]
+  
+# CHANGE VARIABLE NAMES
+  
+names(familyData)[3:17] = c("familiesWithKids", "marriedcouples",
+                            "marriedWithChildren", "maleHouseholder",
+                            "singleDads", "femaleHouseholder", "singleMoms",
+                            "nonFamilyHouseholds", "livingAlone",
+                            "seniorsLivingAlone", "youthHouseholds",
+                            "seniorHouseholds", "avgFamilySize", 
+                            "neverMarriedMen", "marriedMen")
+
+# REMOVE UNNEEDED DATA FRAMES
+
+rm(DP02)
+```
+
+  We'll look at the summary statistics as a whole.
+```{r eval = createCensus}
+summary(familyData)
+``` 
+  
+  There are no missing values. Then we merge family data with population data and remove redundant data frames.
+```{r eval = createCensus}
+famPopData = merge(x = populationData, y = familyData, 
+                   by = c("GEO.id2", "GEO.display.label"),
+                   all = TRUE)
+
+# REMOVE UNNEEDED DATA FRAMES
+
+rm(populationData, familyData)
+  
+summary(famPopData)
+```
+
+  The summary statistics indicate that 78 counties appear in the population data that are not in the family and household data.
+```{r eval = createCensus}
+famPopData[!complete.cases(famPopData), ]
+```
+  
+  They turn out to all be in Puerto Rico. Counties in Puerto Rico have population information yet lack family information. We look back at the eletion results data and GML data and find out that they all don't have any information in Puerto Rico. Therefore, we've decided to drop them.
+```{r eval = createCensus}
+famPopData = famPopData[!is.na(famPopData$familiesWithKids), ]
+```
+
+  We'll carry out EDA again to make sure that the cleaning works as expected. 
+```{r eval = createCensus}
+summary(famPopData)
+```
+
+  It works as expected. There is no NA any more.
+  Then we extract employment data. We are particularly interested in the following variables:
+  
+  GENERAL EMPLOYMENT:
+  - Labor Force Participation Rate (percent over 16 years old who are employed or unemployed)
+  - Unemployment Rate (percent over 16 unemployed)
+  - Female labor force participation rate (percent of females over 16 who are employed or unemployed)
+  - Women over 16 who are employed 
+  - Female Unemployment Rate as the difference between the female labor force participation rate and the rate of female employment
+  
+  EMPLOYMENT BY OCCUPATION: 
+  - Pecent of the civilian labor force employed in management, business, science, and arts occupations
+  - Percent of the civilian labor force employed in service occupations 
+  
+  EMPLOYMENT BY INDUSTRY:
+  
+  - Percent of the civilian labor force employed in agriculture, forestry, fishing and hunting, and mining industries 
+  - Percent of the civilian labor force employed in the construction industry
+  - Percent of the civilian labor force employed in the manufacturing industry
+  - Percent of the civilian labor force employed in the retail trade industry
+  - Percent of the civilian labor force employed in Professional, scientific, and management, and administrative and waste management services industries
+```{r eval = createCensus}
+# EMPLOYMENT DATA
+  
+DP03 = read.csv("http://www.stat.berkeley.edu/~nolan/data/voteProject/census2010/DP03.csv")
+  
+# FRAME CONSTRUCTION
+
+employmentData = DP03[ , c("GEO.id2", "GEO.display.label",
+                           "HC03_VC06", "HC03_VC08", 
+                           "HC03_VC17", "HC03_VC18",
+                           "HC03_VC41", "HC03_VC42", 
+                           "HC03_VC50", "HC03_VC51",
+                           "HC03_VC52", "HC03_VC54",
+                           "HC03_VC58")]
+  
+# CHANGE VARIABLE NAMES
+  
+names(employmentData)[3:13] = c("laborForce", "unemployed",
+                                "femaleLaborForce", "employedWomen",
+                                "occManagement", "occService",
+                                "extractiveIndustries",  "constructionIndustry",
+                                "manufacturingIndustry", "retailIndustry",
+                                "professionalIndustries")
+  
+# ADD FEMALE UNEMPLOYMENT RATE
+employmentData$femaleUnemployment = employmentData$femaleLaborForce - employmentData$employedWomen
+  
+summary(employmentData)
+```
+
+  The EDA with summary statistics indicates that there are no missing counties for the employment data. 
+  After we extract the variables, we combine them into one data frame and assign a name for counties and states that matches those of the aformentioned data frames--election results data and GML data. We will then remove unneeded data frames.
+```{r eval = createCensus}
+# MERGE EMPLOYMENT DATA WITH POPULATION AND FAMILY DATA
+  
+censusData = merge(x = famPopData, y = employmentData, 
+                   by = c("GEO.id2", "GEO.display.label"),
+                   all = TRUE)
+
+rm(famPopData, employmentData)
+
+summary(censusData)
+```
+
+  We then carry out EDA. The summary statistics indicate that 78 counties have NAs.
+```{r eval = createCensus}
+censusData[!complete.cases(censusData), ] 
+```
+
+  They again turn out to all be in Puerto Rico. So we drop them.
+```{r eval = createCensus}
+censusData = censusData[!is.na(censusData$totalPop), ]
+```
+
+  We'll carry out EDA again to make sure that the cleaning works as expected. 
+```{r eval = createCensus}
+summary(censusData)
+```
+
+  It works as expected. There is no NA any more.
+```{r eval = createCensus}
+# STATE & COUNTY NAMES
+cNames = as.character(censusData$GEO.display.label)
+cNames = gsub(' ', "", cNames)
+  
+# SPLIT STATE NAMES AND COUNTY NAMES
+names = strsplit(cNames, split = ",")
+  
+# ADD COUNTY NAMES TO THE DATA FRAME
+censusData$County = cNamesManip(sapply(names, function(x) x[1]))
+
+# ADD STATE NAMES TO THE DATA FRAME
+censusData$State = tolower(gsub(" ", "", sapply(names, function(x) x[2])))
+  
+# CHANGE FIPS NAME AND DROP GEO.display.label
+names(censusData)[1] = "FIPS"
+censusData = censusData[, -2]
+  
+summary(censusData)
+```
+
+  There are no changes in the summary statistics by variable after merging the family and population data frame with the employment data frame. There are 3,139 counties represented. 
+```{r eval = createCensus}
+save(censusData, file = "censusData.rda")
+```
+
+```{r}
+load("censusData.rda")
+```
+
+### Data Organization
+
+  This part was mutually accomplished by Victor Choi, Jieni Wan, Qichen Sun & Menglu Cao.
+
+## Merging 2008 & 2012 Election Results
+
+  At last, we can merge all of the data into one data frame for further analys
+  First we take the union merge of 2008 and 2012 election results, and compare it to other types of merges in order to determine if more cleaning is needed.	
+```{r eval = merge}
+merge0812 = merge(countyVotes2012, countyVotes2008, by = c("County", "State"), all = TRUE)
+merge0812[which(!complete.cases(merge0812)), ]
+```
+
+  We find that the 2008 data does not contain data for District of Columbia, so we decide to code it in. We also find that 2012 data does not contain data for Alaska, so we decide to remove the row.
+```{r eval = merge}
+merge0812[merge0812$County == "districtofcolumbia", c(5, 6)] = c(245800, 17367)
+merge0812 = merge0812[merge0812$County != "alaska", ]
+```
+
+  We should perform the EDA again to make sure the cleaning works as expected.
+```{r eval = merge}
+merge0812[which(!complete.cases(merge0812)), ]
+```
+
+  It works fine.
+  
+## Merging GML & Census Data
+
+  Next, we take the union merge of the GML data and the census data. And we perform EDA to the new data frame.
+```{r eval = merge}
+mergeGMLCensus = merge(GML_df, censusData, by = c("County", "State"), all = TRUE)
+mergeGMLCensus[!complete.cases(mergeGMLCensus), ]
+```
+
+  After performing EDA, we decide to take out Alaska since merge0812 doesn't contain counties in Alaska. Also, there is no census data for King, Loving, and Kenedy Texas, South Boston City, and Clifton Forge City, so we take them out as well. GML data for Broomfield, Colorado is missing, so we add it in. To solve the Tilde problem in Donaana, New Mexico, we decide to manually fix it.
+  The rest of NAs is from holes only in the Census Data. We take that row out.
+```{r eval = merge}
+mergeGMLCensus = mergeGMLCensus[(which(mergeGMLCensus$State != "alaska")), ]
+mergeGMLCensus = mergeGMLCensus[(which(!mergeGMLCensus$County %in% c("king", "loving", "kenedy", "cliftonforgecity", "southbostoncity"))), ]
+mergeGMLCensus[mergeGMLCensus$County == "broomfield", c(3, 4)] = c(39.953302, -105.052038)
+mergeGMLCensus = mergeGMLCensus[(which(!mergeGMLCensus$County == "donaana")), ]
+mergeGMLCensus[mergeGMLCensus$County == "doñaana",  c("County", "Latitude", "Longitude")] = c("donaana", 32.34523, -106.83238)
+mergeGMLCensus = mergeGMLCensus[mergeGMLCensus$County != "kalawao", ]
+```
+  
+  We should perform the EDA again to make sure the cleaning works as expected.
+```{r eval = merge}
+mergeGMLCensus[!complete.cases(mergeGMLCensus), ]
+```
+  
+  It works fine.
+  
+## Merging 2004 Election Result and GML&Census Data
+
+  Next we merge the 2004 election result data and the GML&Census data together.
+```{r eval = merge}
+merge04GMLCensus = merge(countyVotes2004, mergeGMLCensus, by = c("County", "State"), all = TRUE)
+merge04GMLCensus[!complete.cases(merge04GMLCensus), ]
+```
+
+  We find that countyVotes2004 doesn't have data in Hawaii, so we decide to take them out.
+  As for King, Loving and Kenedy county at Texas, we do the same manipulation as before.
+  We also find that the names of washington and miami-dade are different in these 2 data frames, so we manually fix these.
+```{r eval = merge}
+merge04GMLCensus = merge04GMLCensus[(which(!merge04GMLCensus$County %in% c("king", "loving", "kenedy"))), ]
+
+merge04GMLCensus = merge04GMLCensus[(which(merge04GMLCensus$State != "hawaii")), ]
+
+merge04GMLCensus[merge04GMLCensus$County == "districtofcolumbia", c(3, 4)] = c(19007, 183876)
+merge04GMLCensus = merge04GMLCensus[!(merge04GMLCensus$County == "washington" & merge04GMLCensus$State == "districtofcolumbia"), ]
+
+merge04GMLCensus[merge04GMLCensus$County == "miamidade", c(3, 4)] = c(358613, 406099)
+merge04GMLCensus = merge04GMLCensus[!(merge04GMLCensus$County == "dade" & merge04GMLCensus$State == "florida"), ]
+```
+
+  We should perform the EDA again to make sure the cleaning works as expected.
+```{r eval = merge}
+merge04GMLCensus[!complete.cases(merge04GMLCensus), ]
+```
+  
+  It works fine.
+
+## Merging 2016 Election Result and 04&GML&Census Data
+  
+  Next we merge the above data frame with the 2016 election result data.
+```{r eval = merge}
+merge04GMLCensus16 = merge(countyVotes2016, merge04GMLCensus, by.x = "combined_fips", by.y = "FIPS", all = TRUE)
+merge04GMLCensus16[!complete.cases(merge04GMLCensus16), ]
+```
+
+  We notice that all the NAs are results of the fact that the 2016 election result has data in Alaska, while the other data frame does not. So we skip Alaska by taking them out.
+```{r eval = merge}
+merge04GMLCensus16 = merge04GMLCensus16[complete.cases(merge04GMLCensus16), ]
+```
+
+## Final Merge
+
+  Finally, we merge the result for 0812 with 04GMLCensus16 by county and state, and get the rows with NAs into a new data frame.
+```{r eval = merge}
+final = merge(merge04GMLCensus16, merge0812, by = c("County", "State"), all = TRUE)
+final[!complete.cases(final), ]
+```
+
+  Actually there are some independent cities in US. They may share the same names with some counties in their states. For these independent cities, they have names like "xxxcity" in one data frame but are named as just "xxx" in another one, which explains the existence of some NAS. 
+  To solve the matching problem, we first specify the rows that contain such "xxxcity" names and those with corresponding names, "xxx", in the data frame, NAs. Since "xxx" and "xxxcity" stand for the same place, we just need to keep one of them.  We add missing values to the rows with "xxxcity" names by referring to the values in rows with correspondinbg "xxx" names. 
+```{r eval = merge}
+city = c(36, 273, 305, 457, 483, 606, 651, 721, 882, 909, 987, 1010, 1179, 1226, 1297, 1656, 1739, 1783, 1785, 1836, 2075, 2097, 2106, 2246, 2320, 2325, 2380, 2501, 2670, 2728, 2913, 3018, 3078, 3087)
+county = city - 1
+final[city, c(42, 43, 44, 45)] = final[county, c(42, 43, 44, 45)]
+```
+
+  In addition, one county can have several different names in US. For example, Brooklyn in New York has another name, Kings. Thus, the row with county name, brooklyn, and state name, newyork, cannot be connected with the row with county name, kings, and state name, newyork by merging. We find out all such cases and conflate information for the same place together. Again, we just need to keep one row for each pair.  
+```{r eval = merge}
+final[c(1433, 1434, 2695, 2705, 1514, 2082, 2430), c(42, 43, 44, 45)] = final[c(1404, 1405, 2497, 2498, 278, 1787, 2668), c(42, 43, 44, 45)]
+```
+
+  After adding the missing values, we perform the EDA again to check if the cleaning works as expected. Turns out, it does. And we find that the rest of NAs are only concerned with the missing data in census data. Considering the difficulty in obtaining those missing data, we evantually decide to drop them and get our final data frame.
+```{r eval = merge}
+final = final[complete.cases(final), ]
+```
+
+  To save storage and make the following analysis easier, we've decided to drop unnecessary columns, and rearrange the variable sequences. 
+```{r eval = merge}
+final = final[c(1, 2, 10, 11, 8, 9, 44, 45, 42, 43, 6, 7, 12:41)]
+save(final, file = "finalDataFrame.rda")
+```
+
+  At last, we remove the intermediate data frames.
+```{r eval = merge}
+rm(merge0812, mergeGMLCensus, merge04GMLCensus, merge04GMLCensus16)
+```
+
+  The session info is as follows.
+```{r}
+sessionInfo()
+```
+
+## REFERENCES
+
+Adrian A. Dragulescu (2014). xlsx: Read, write, format Excel 2007 and
+  Excel 97/2000/XP/2003 files. R package version 0.5.7.
+  https://CRAN.R-project.org/package=xlsx
+
+Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and
+  Generating XML Within R and S-Plus. R package version 3.98-1.4.
+  https://CRAN.R-project.org/package=XML
+  
+Duncan Temple Lang and the CRAN team (2016b). RCurl: General Network
+  (HTTP/FTP/...) Client Interface for R. R package version 1.95-4.8.
+  https://CRAN.R-project.org/package=RCurl
+
+Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read
+  Tabular Data. R package version 1.0.0.
+  https://CRAN.R-project.org/package=readr
+  
+Nolan, Deborah. County Votes 2004. Retrieved from 
+  http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt
+  
+Nolan, Deborah. Counties, Longitude and Latitude. Retrieved from 
+  http://www.stat.berkeley.edu/~nolan/data/voteProject/counties.gml
+  
+Politico. (2016). 2012 Presidential Election Results. Available from 
+  http://www.politico.com/2012-election/results/map/#/President/2012/
+
+Population Information of Jefferson County, Mississippi
+  https://en.wikipedia.org/wiki/Jefferson_County,_Mississippi
+  
+Population Information of Buffalo County, South Dakota
+  https://en.wikipedia.org/wiki/Buffalo_County,_South_Dakota
+  
+Population Information of Shannon County, South Dakota(aka Oglala Lakota County after 2015)
+ https://en.wikipedia.org/wiki/Oglala_Lakota_County,_South_Dakota
+
+R Core Team (2016). R: A language and environment for statistical
+  computing. R Foundation for Statistical Computing, Vienna, Austria. URL
+  https://www.R-project.org/.
+  
+tonmcg. (2016). County-Level Election Results 12-16. Retrieved from     
+  https://github.com/tonmcg/County_Level_Election_Results_12-16/blob/master/2016_US_County_Level_Presidential_Results.csv
+  
+United States Census Bureau. (2016). American Fact-Finder. Available from       
+  https://factfinder.census.gov/faces/nav/jsf/pages/searchresults.xhtml?refresh=t
+
+United States presidential election results in California, 2004
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_California,_2004
+
+United States presidential election results in Florida, 2004
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Florida,_2004
+
+United States presidential election results in Hawaii, 2012  
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Hawaii,_2012#By_county
+
+United States presidential election results in New York, 2012
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_New_York,_2008#By_county
+  
+United States presidential election results in Texas, 2004
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2004
+  
+United States presidential election results in Texas, 2008
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
+  
+United States presidential election results in Texas, 2012
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2012
+  
+United States presidential election results in Texas, 2016
+  https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2016
+
+United States presidential election in Virginia, 2008
+  https://en.wikipedia.org/w/index.php?printable=yes&title=United_States_presidential_election_in_Virginia,_2008
