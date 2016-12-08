@@ -2,20 +2,18 @@
 title: "rpart"
 output: html_document
 ---
+First we load the dataframe we get in first part.
 ```{r}
-load("finalDataFrame-1.rda")
+load("finalDataFrame.rda")
 ```
 
+We add one column in the dataframe that indicate which party was mostly voted by the county. Then we subset those dataframe,removing the names of the county and the election result in previous years. We want to use census data to predict the election results for 2016.
 ```{r}
-final$res2004 = final$BushVote2004<final$KerryVote2004
-final$res2008 = final$ObamaVote2008>final$MccainVote2008
-final$res2012 = final$ObamaVote2012>final$RomneyVote2012
 final$res2016 = final$ClintonVote2016>final$TrumpVote2016
-final = final[,c(-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-42,-43,-44,-45)]
-
+final = final[,-seq(1:12)]
 ```
 
-
+We split the data in to test part and train part.
 ```{r}
 nTotal = nrow(final)
 chooseTest = sample(nTotal, size = 404, replace = FALSE)
@@ -23,6 +21,7 @@ finalTest = final[chooseTest, ]
 finalTrain = final[ -chooseTest, ]
 ```
 
+We want to use the cross-validation to train our model. We decide to split them into three folds.
 ```{r}
 set.seed(12344321)
 permuteIndices = sample(2700)
@@ -30,6 +29,7 @@ v = 3
 folds = matrix(permuteIndices,ncol = 3)
 ```
 
+We want to find the cp that will produce the highest precision. So we get a vector of cp and use for loop to try them out.
 ```{r}
 cps = c(seq(0.0001, 0.001, by = 0.0001), 
        seq(0.001, 0.01, by = 0.001),
@@ -37,7 +37,6 @@ cps = c(seq(0.0001, 0.001, by = 0.0001),
 
 preds = matrix(nrow = 2700, ncol = length(cps))
 library(rpart)
-library(class)
 for (i in 1:v) {
   trainFold = as.integer(folds[, -i])
   testFold = folds[, i]
@@ -47,15 +46,15 @@ for (i in 1:v) {
             data = finalTrain[trainFold,],
             method = "class",
             control = rpart.control(cp = cps[j]))
-    #preds[testFold,j] = knn(finalTrain[trainFold,],finalTest[testFold,],res2016 ~ .,3,prob = TRUE)
     preds[testFold,j] =
       predict(tree,
-              newdata = finalTrain[testFold,-34],
+              newdata = finalTrain[testFold,-length(testFold)],
               type = "class")
   }
 }
 ```
 
+After the cross-validation, we get the prediction result for the train set and by converting them into false and true, we are able to compare it with the true result and get the accuracy rate.
 ```{r}
 cvRates = apply(preds, 2, function(oneSet) {
   oneSet[which(oneSet == 1)] = "FALSE"
@@ -64,8 +63,8 @@ cvRates = apply(preds, 2, function(oneSet) {
 })
 ```
 
+We make a plot to see which cp will produce the highest precision.It is going up for a while and going down after reaching it peak.
 ```{r}
-which.max(cvRates)
 library(ggplot2)
 cvRes = data.frame(cps, cvRates)
 ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
@@ -73,29 +72,49 @@ ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
   labs(x = "Complexity Parameter", y = "Classification Rate")
 ```
 
+We choose a slightly bigger cp to build our final predictor. We train the model by randomly subset the whole dataframe and predict the result of the whole dataframe. Its accuracy rate is 0.92,which is behaving pretty well.
 ```{r}
 cpChoice = cvRes[which.max(cvRates)+2,1]
-
+rand = sample(1:3104,2000)
+finaltraindf = final[rand,]
 finalTree = rpart(res2016 ~ .,
-                  data = finalTrain,
+                  data = finaltraindf,
                   method = "class",
                   control = rpart.control(cp = cpChoice))
 
 #finalTree = knn(finalTrain,finalTest,res2016,3,prob = TRUE)   
 testPreds = predict(finalTree, 
-              newdata = finalTest[,-34],
+              newdata = final[,-31],
               type = "class")
 
-classRate = sum(testPreds == finalTest$res2016) / 
-  nrow(finalTest)
+classRate = sum(testPreds == final$res2016) / nrow(final)
 
 classRate
 ```
 
+We draw the tree to see how many levels do we have and which variables are used to predict.
 ```{r}
 library(rpart.plot)
 prp(finalTree, extra = 2)
 ```
 
+We want to figure out when the model makes mistakes. So we add the predict result into the dataframe as a column. There are four cases, which is predict true when it is true, predict false when it is true, predict false when it is false and predict true when it is false.
+```{r}
+truetrue = final[which(testPreds==TRUE&final$res2016==TRUE),]
+falsefalse = final[which(testPreds==FALSE&final$res2016==FALSE),]
+truefalse = final[which(testPreds==TRUE&final$res2016==FALSE),]
+falsetrue = final[which(testPreds==FALSE&final$res2016==TRUE),]
 
+truetrue$pred = "righttrue"
+falsefalse$pred = "rightfalse"
+truefalse$pred = "wrongtrue"
+falsetrue$pred = "wrongfalse"
 
+predfinal = rbind(truetrue,falsefalse,truefalse,falsetrue)
+```
+
+From the tree I built above, the node laborForce doesn't have enough purity. It shows that false has 25 out of 39,and true has 87 out of 105. So I think the wrong predection may happen here. I make a plot to verify my guess. 
+```{r}
+ggplot(predfinal)+geom_density(mapping = aes(x = laborForce, color = pred))
+```
+It turns out that there are not much difference in laborforce rate between voting for Democratic and Republic. It means the laborforce and votes are not closely related. So when we make prediction based on laborforce, chances are that the predictor will make mistakes.
