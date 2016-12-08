@@ -4,55 +4,157 @@ author: "Jieni Wan"
 date: "2016"
 output: html_document
 ---
+## Predictor for Election Result Change from 2012 to 2016
+
 ```{r}
 load("finalDataFrame.rda")
 ```
 
-```{r}
-final$change0812 = (final$ObamaVote2008 > final$MccainVote2008) != (final$ObamaVote2012 > final$RomneyVote2012)
+  We use the k nearest method to build a predictor for the election result change from 2012 to 2016, i.e., we'll predict whether a county will stay voting for the Democratic/Republican party, or it will swing from Democratic to Republican, or the other way around. To meet this end, we will be using the k nearest neighbor algorithm.
 
-final$change1216 = (final$ObamaVote2012 > final$RomneyVote2012) != (final$ClintonVote2016 > final$TrumpVote2016)
+### Data Frame Manipulation
+
+  First, we will generate the observations for the change. We call this variable "change1216", and add it to our data frame.
+```{r}
+final$change1216 = character(nrow(final))
+
+final$change1216[(final$ObamaVote2012 > final$RomneyVote2012) & (final$ClintonVote2016 > final$TrumpVote2016)] = "DD"
+
+final$change1216[(final$ObamaVote2012 > final$RomneyVote2012) & (final$ClintonVote2016 < final$TrumpVote2016)] = "DR"
+
+final$change1216[(final$ObamaVote2012 < final$RomneyVote2012) & (final$ClintonVote2016 > final$TrumpVote2016)] = "RD"
+
+final$change1216[(final$ObamaVote2012 < final$RomneyVote2012) & (final$ClintonVote2016 < final$TrumpVote2016)] = "RR"
+
+final$change1216 = as.factor(final$change1216)
 ```
 
+  By saying neighbors of a particular county, we mean that they share similar characteristics with this county. These charateristics, not only including geographic information, but also other features concerning family, economy and population. The definition of neighbors in this case is based on our expectation that counties sharing alike features are more likely to behave similarly. Here we choose 8 features which we assume more or less have influence upon the results, namely the longitude, latitude, percent of white population, percent of households with a male householder and percent of employed women, labor force participation rate, unemployment rate, percent of the civilian labor force employed in professional, scientific, management, administrative and waste management services industries.
+  
+  The reason we include state information in the new data frame final2 as well is that, when we randomly divide the counties into the train and test sets, there is every possibility that most counties in one state fall into the test set. In this case, there are so few counties in this state that the predictor may not function well. Hence, we have decided that when dividing the counties to two parts, we will do this by stratifying across states first. That is to say, we will take half counties of each state out to the test set. 
 ```{r}
-nTotal = nrow(final)
-
-set.seed(1234)
-TrainIndex = sample(nTotal, 2700, replace = FALSE)
-
-Train = final[TrainIndex, c("percentWhite", "maleHouseholder", "femaleHouseholder", "laborForce", "unemployed", "constructionIndustry", "change0812")]
-
-Test = final[-TrainIndex, c("percentWhite", "maleHouseholder", "femaleHouseholder", "laborForce", "unemployed", "constructionIndustry", "change0812")]
-
-TrainTruth = final[TrainIndex, "change1216"]
+final2 = final[c("State", "Latitude", "Longitude", "percentWhite", "maleHouseholder", "employedWomen", "laborForce", "unemployed", "professionalIndustries")]
 ```
 
+  Also, we find that the latitude and longitude are of the class character. Thus we turn them into numerics, for otherwise we cannot calculate the distances between counties based on geographic information.
 ```{r}
-k = 1:20
-preds = matrix(nrow = nrow(Test), ncol = length(k))
+final2$Latitude = as.numeric(final2$Latitude)
+final2$Longitude = as.numeric(final2$Longitude)
+```
+  
+  Note that here we need a distance matrix, meaning the features that decide the distances have to be of the same scale. Therefore we normalize these variables.
+```{r}
+final2[-1] = sapply(final2[-1], function(x) (x - mean(x)) / sd(x))
+``` 
+
+
+### Train and Test Data
+
+  As we discussed before, we want to "randomly" place some counties in the test set, but we also want to make sure that each state has enough counties in the train set. For each state, we find all the counties in it, and then sample these rows for the train set. After this step we can drop the state variable.
+```{r}
+states = unique(final2$State)
+set.seed(12345678)
+chooseTrain = unlist(lapply(states, function(x) {
+  Counties = which(final2$State == x)
+  n = length(Counties)
+  if(n > 1)
+  sample = sample(Counties, ceiling(n / 2))
+  else sample = Counties
+  return(sample)
+}))
+final2 = final2[, -1]
+```
+
+  Now that we already have the county index for the train test, we can now divide the data frame final2 apart. Let's call the test set `test` and the train set `train`. Also, we call the truth of the train set `trainTruth` and the truth of the test set `testTruth`.
+```{r}
+train = final2[chooseTrain, ]
+test = final2[-chooseTrain, ]
+
+trainTruth = final[chooseTrain, "change1216"]
+testTruth = final[-chooseTrain, "change1216"]
+```
+  
+### Building the K-NN Predictor
+
+  Next, We want to build a predictor using the K-NN method for several values of the tuning parameter `k`. We can compare the truth with the predictions by calculating error rates and select a proper value for `k` to make the error rates relatively small.
+  
+  Here, we make different groups of predictions for the test set based on the train set by setting this parameter from 1 to 20. The predictions corresponding to different `k` are put into the matrix `preds`.  
+```{r}
+k = 20
+preds = matrix(nrow = nrow(test), ncol = k)
 library(class)
-for (j in 1:length(k))  preds[, j] = knn(Train, Test, TrainTruth, j)
+for (j in 1:k)  preds[, j] = knn(train, test, trainTruth, j)
 ```
 
+  Notice that the predictions are numbers, 1, 2, 3, 4, which stand for "DD", "DR", "RD" and
+"RR" respectively, whereas the class of truth is factor. Thus, we first convert `testTruth` to a numeric vector.
+
+   We can see how many predictions are different from the truth in total and compute the ratio. However, considering that the number of the counties that stay voting for the Democratic/Republican party is large, it is better to calculate error rates for each classification.
 ```{r}
-cvRates = apply(preds, 2, function(oneSet) {
-  oneSet[oneSet == 1] = TRUE
-  oneSet[oneSet == 2] = FALSE
-  sum(oneSet) / nrow(preds)
+testTruth = as.numeric(testTruth)
+errorRates = matrix(nrow = 20, ncol = 4)
+for(i in 1:4){
+  errorRates[, i] = apply(preds, 2, function(x) {
+  sum(x[testTruth == i] != testTruth[testTruth == i]) / length(testTruth[testTruth == i])
 })
+}
+colnames(errorRates) = c("DD", "DR", "RD", "RR")
+errorRates = as.data.frame(errorRates)
+errorRates$k = 1:20
 ```
 
+  With a data frame containing the error rates correponding to different classifications and `k` values, we plot 4 lines using ggplot. Each line shows the relationship between k values and error rates for a specific classification.
 ```{r}
-which.max(cvRates)
 library(ggplot2)
-cvRes = data.frame(k, cvRates)
-ggplot(data = cvRes, aes(x = k, y = cvRates)) +
-  geom_line() + 
-  labs(x = "k value", y = "Classification Rate")
+ggplot(data = errorRates)+
+  geom_line(aes(x = k, y = DD, color = "DD"))+
+  geom_line(aes(x = k, y = DR, color = "DR"))+
+  geom_line(aes(x = k, y = RD, color = "RD"))+
+  geom_line(aes(x = k, y = RR, color = "RR"))+
+  scale_x_continuous(name = "k value")+
+  scale_y_continuous(name = "error rate")
 ```
 
+  To compare the impact the two features, labor force participation rate and female labor force participation, may have on the 2016 election results, we subset one more time to get a new data frame and similarly repeat what we have done above. 
+  
+  Notice that we do not need to sample rows for the train set again. Since we are making comparisons, we need to control the other factors, including the train and test sets. 
 ```{r}
-kChoice = cvRes[which.max(cvRates), 1]
-knn = knn(Train, Test, TrainTruth, kChoice)   
+final3 = final[c("State", "Latitude", "Longitude", "percentWhite", "maleHouseholder", "employedWomen", "femaleLaborForce", "unemployed", "professionalIndustries")]
 
+final3$Latitude = as.numeric(final2$Latitude)
+final3$Longitude = as.numeric(final2$Longitude)
+final3[-1] = sapply(final3[-1], function(x) (x - mean(x)) / sd(x))
+final3 = final3[, -1]
+
+train = final3[chooseTrain, ]
+test = final3[-chooseTrain, ]
+
+trainTruth = final[chooseTrain, "change1216"]
+testTruth = final[-chooseTrain, "change1216"]
+
+k = 20
+preds = matrix(nrow = nrow(test), ncol = k)
+library(class)
+for (j in 1:k)  preds[, j] = knn(train, test, trainTruth, j)
+
+
+testTruth = as.numeric(testTruth)
+errorRates = matrix(nrow = 20, ncol = 4)
+for(i in 1:4){
+  errorRates[, i] = apply(preds, 2, function(x) {
+  sum(x[testTruth == i] != testTruth[testTruth == i]) / length(testTruth[testTruth == i])
+})
+}
+colnames(errorRates) = c("DD", "DR", "RD", "RR")
+errorRates = as.data.frame(errorRates)
+errorRates$k = 1:20
+
+library(ggplot2)
+ggplot(data = errorRates)+
+  geom_line(aes(x = k, y = DD, color = "DD"))+
+  geom_line(aes(x = k, y = DR, color = "DR"))+
+  geom_line(aes(x = k, y = RD, color = "RD"))+
+  geom_line(aes(x = k, y = RR, color = "RR"))+
+  scale_x_continuous(name = "k value")+
+  scale_y_continuous(name = "error rate")
 ```
