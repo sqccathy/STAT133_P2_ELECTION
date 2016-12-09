@@ -1,0 +1,578 @@
+---
+title: "Election Project, Part 2"
+author: "John Towey"
+output: html_document
+---
+
+```{r setup, echo = FALSE}
+codeInclude = TRUE
+```
+
+## PRELIMINARY REMARKS 
+
+The goal for part 2 is to graphically explore possible interesting relationships between variables in the election data and variables in the census data.
+
+## LOAD FINAL DATA FRAME FROM PART I AND GENERATE REPUBLICAN VOTE SHARE VARIABLE
+
+We start part two with the final data frame from Part 1, including all the merged data. We load the data frame and begin exploring it by plotting relationships that could be interesting. 
+
+```{r load data, echo = codeInclude}
+load("~/downloads/finalDataFrame-2.rda")
+```
+
+The first step here is to generate variables indicating the percent of the vote won by the republican candidate in each year of interest. We do this by dividing the number of votes won by the republican candidate by the sum of the votes won by either republican or democratic candidates. This excludes third parites, but with no victories since long before 2004, this seems like a reasonable operation.
+
+```{r generate variable, echo = codeInclude}
+final$republicanShare2016 = 
+  (final$TrumpVote2016/(final$TrumpVote2016 + 
+                         final$ClintonVote2016))*100
+
+final$republicanShare2012 = 
+  (final$RomneyVote2012/(final$RomneyVote2012 + 
+                         final$ObamaVote2012))*100
+
+final$republicanShare2008 = 
+  (final$MccainVote2008/(final$MccainVote2008 + 
+                         final$ObamaVote2008))*100
+
+final$republicanShare2004 =
+  (final$BushVote2004/(final$BushVote2004 + 
+                         final$KerryVote2004))*100
+```
+
+## PLOT 1: RACE AND ELECTORAL POLITICS
+
+There has been much conversation about the role that race played in the 2016 election. The first plot demonstrates relationships between race and electorial politics by indicating the effect of the proportion of white residents in a county on republican vote share in the county. Ideally we would like to relate changes in electoral share to changes in demographic compositions, but with only 2010 census data, we must make the assumption that the proportion of white residents in counties does not significantly change between 2004 and 2016. It seems like the 2010 census data would be more representative of the 2008 and 2012 populations than the 2004 and 2016 populations. More research would be needed to verrify these results using data from, e.g., the American Community Survey program at the U.S. Census Bureau for specific election years. Ultimately, though, it seems reasonable to make the aforementioned assumption.  
+
+In order to make this comparison, we plot the percent of the county population that is white in 2010 on the x-axis and the percent of the vote won by the republican candidate on the y-axis. We first create a scatter plot and then layer one smoothed line per election year. The choice of smoothed line here is for readability and to ascertain the general relationship between these variables. The method chosen is "loess", and the span is .25 to give the lines some flex.
+
+```{r plot 1, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Dark2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$percentWhite, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .1, position = 'jitter') +
+  geom_point(mapping = aes(x = final$percentWhite, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .07, position = 'jitter') +
+  geom_point(mapping = aes(x = final$percentWhite, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .05, position = 'jitter') +
+  geom_point(mapping = aes(x = final$percentWhite, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .01, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$percentWhite, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$percentWhite,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$percentWhite,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$percentWhite,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Race and Electoral Politics: 2004-2016") +
+  xlab("Percent of County Population that is White") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot seems to indicate a positive relationship between the proportion of white residents in a county and the proportion of vote shares in the county going to the republican candidate. However, there seems to be more variability at higher values of both variables. Even so, the data seem to show that as the proportion of a county population that is white increases, the vote share going to the repubican candidate increases, and this is true for all four selected election years. In counties with higher proportions of white residents, the vote share going to republican candidates is higher in 2016, and lower in 2008. Moreover, because race and social class are so closely linked, it is not possible to conclude that being white, rather than being wealthy or living in a wealthy county, is driving voting. The following plots will attempt to explore class relations. 
+
+## PLOT 2: SOCIAL CLASS AND ELECTORAL POLITICS
+
+While there is no variable in our census data that explicitly classifies social groups, we think that certain variables give some indication of the general social class of a county. On the one hand, individuals classified in management, business, science, and arts occupations would tend to have higher educations and salaries than those classified in other occupations. However, we also think that individuals classified into professional, scientific, and management, and administrative and waste management services industries would tend to have higher income and educations than others. We thus select the percent employed in higher status occupations and higher status industries as two different indicators of the social class of a county, with higher proportions of residents in these occupations or industries indicating a higher proportion of residents in a county being middle class or higher. And again, we compare these indicators to the proportion of the county vote won by the republican candidate in each year of interest with a set of smoothed lines layered over a scatterplot. Parameters for the scatter plots and the smoothing are identical to Plot 1 to facilitate comparison.  
+
+First we take the percent of individuals in management, business, science, and arts occupations.
+
+```{r plot 2a, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set1")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$occManagement, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$occManagement, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$occManagement, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$occManagement, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+    geom_smooth(mapping = aes(x = final$occManagement, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$occManagement,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$occManagement,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$occManagement,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Class and Electoral Politics I: 2004-2016") +
+  xlab("Percent of County Population Whose Occupation\n is Management, Business, Science, or Arts") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The scatter plot points are clumped in the middle of this plot, with the smoothed lines describing a lazy, concave-down arc through the plot reagion. From left to right the smoothed lines first have a positive angle, then are mostly flat, and then have a negative slope. This could indicate a non-linear relationship, or no relationship between these variables.   
+
+Next we will explore industrial effects, rather than occupational effects.
+
+```{r plot 2b, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$professionalIndustries, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$professionalIndustries, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$professionalIndustries, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$professionalIndustries, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$professionalIndustries, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$professionalIndustries,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$professionalIndustries,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$professionalIndustries,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Class and Electoral Politics II: 2004-2016") +
+  xlab("Percent of County Population Whose Industry is Professional, Scientific,\n and Management, and Administrative and Waste Management Services") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The plot of republican vote share by employment share of high-status industries shows there may be a weak negative relationship, given the layer of smoothed lines sloping down and to the right through the largest part of the scatterplot. This indicates, that for counties on the lower end of the scale measuring the percent employed in these industries, higher proportions of high-status employment would be associated with a lower share of votes going to the republican candidate. This is possible, but more research is needed given that the realtionship seems to flatten out at higher values of employment in these industries. 
+
+What is clear from both of the plots that attempt to show how social class and voting behaviors are related, is that these are not good variables to use for plotting like this, because they do not vary very much. For both occupational and industrial classification, the vast majority of counties have very similar rates of employment, and with little differentiation in counties by employment, it is difficult to make a case one way or another that social class, as measured by employment in high-status occupations or industries, affects voting behavior. To further explore possible realtionships, we turn now to gender and family structure.   
+
+## PLOT 3: GENDER, FAMILY STRUCTURE, AND ELECTORAL POLITICS
+
+It is widely known that in addition to race and social class, one of the predominant dimensions of variation of the social world is gender. Specific to our data from the census bureau, we identify the percent of single mothers in a county as capturing dimensions of both gender and family structure--to the extent that singel parenthood is largely a gendered phenomenon, with single motherhood being much more common than single fatherhood. Another important facet of gender and family structure is bachelorhood. Un-married men experience hardship differently than married men. In our dataset, we think the variable describing the percent of never-married men in a county captures this dimension of social life.
+
+The first plot relates the percent of single-mother-families in a county to, again, the county vote share won by the republican canididate in each of our four selected election years. We overlay smoothed lines on a scatter plot, as in the two previous sections, and as before, the paramaters for the scatterplot and smoothed lines are identical to Plot 1 to facilitate comparison. 
+
+```{r plot 3a, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set3")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$singleMoms, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$singleMoms, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$singleMoms, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$singleMoms, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$singleMoms, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$singleMoms,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$singleMoms,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$singleMoms,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Gender, Family Structure, and Electoral Politics I: 2004-2016") +
+  xlab("Percent of Single Mothers in County") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The smoothed lines of this plot clearly slope down and to the right. This indicates that as the percentage of single mothers in a county increases, the vote share won by the republican candidate decreases. This is true for all four election years, though at slightly difference levels. 
+
+The second plot relates the percent of families in a county composed of un-married men to the county vote share won by the republican candidate in each election year. Parameters for the scatter plot and smoothed lines are identical to previous plots. 
+
+```{r plot 3b, echo = codeInclude} 
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Dark2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$neverMarriedMen, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$neverMarriedMen, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$neverMarriedMen, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$neverMarriedMen, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$neverMarriedMen, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$neverMarriedMen,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$neverMarriedMen,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$neverMarriedMen,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Gender, Family Structure, and Electoral Politics II: 2004-2016") +
+  xlab("Percent of Never-Married Men in County") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot also indicates a negative relationship between these variables. The Northwest to Southeast orientation of the scatterplot and the seemingly downward-right sloping smoothed lines through the largest portion of the scatterplot appears to indicate that as the proportion of never-married men in a county increases, the vote share won by the republican candidate decreases. 
+
+The above findings could idicate that gender and family structure may be important determinants of voting behavior. Both single mothers and never-married men appear to be less likely to vote for republican candidates. This could be an indication of the strength of so-called "family values"" among conservative individuals, or there could be something else going on. The last relationships we will explore compare economic conditions with voting behavior. 
+
+## PLOT 4: ECONOMIC CONDITIONS AND ELECTORAL POLITICS
+
+The primary concern for the average voter vis-a-vis the economy seems to be employment. Discourse on jobs has been a central fixture of elections for as long as we can remember. Given the importance of employment to elections, it is interesting to see how employment translates into voting behavior. We use county unemployment and labor force participation rates, as well as female unemployment and labor force participation rates, to examine economic conditions that the average voter might encounter. We do not look at employment in specific occupational or industrial categories, given the apparent lack of relationship we observed in Plot 2. 
+
+First, we plot the vote share won by republican candidates by the percent of unemployed individuals in counties. We use the same parameters for scatter plots and smoothed lines as in every previous plot. 
+
+```{r plot 4a, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set1")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$unemployed, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$unemployed, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$unemployed, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$unemployed, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$unemployed, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$unemployed,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$unemployed,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$unemployed,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics I: 2004-2016") +
+  xlab("County Percent Unemployed") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The scatter plot and the smoothed lines slope mainly from the upper-left to the bottom right. This indicates a negative relationship, in which counties with higher unemployment rates are associated with lower vote share won by republican candidates. 
+
+Next we examine the relationship between labor force participation and vote share won by republican candidates. 
+
+```{r plot 4b, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$laborForce, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$laborForce, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$laborForce, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$laborForce, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$laborForce, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$laborForce,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$laborForce,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$laborForce,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics II: 2004-2016") +
+  xlab("County Percent Labor Force Participation") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This relationship appears much weaker. The scatter plot clumps in the center of the chart, while the smoothed lines run primarily accross the chart horizontally. There is a slight concave-down arch to the smoothed lines, and through the densest part of the scatter plot the smoothed lines may have a slight slope down and to the right. This indicates that there may be a very weak negative relationship between these variables. However, we do not think that labor force parrticipation, by itself, offers much explanatory power in relation to voting behavior. 
+
+Next, we examine how economic conditions and gender may interact. We plot female unemployment rates on the x axis and republican vote share on the y axis. 
+
+```{r plot 4c, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$femaleUnemployment, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleUnemployment, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleUnemployment, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleUnemployment, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$femaleUnemployment, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleUnemployment,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleUnemployment,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleUnemployment,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics III: 2004-2016") +
+  xlab("County Percent Female Unemployed") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot is not substantially different from the plot of the relationship between general unemployent and republican vote share. Again, there seems to be negative relationship between these variables. Higher values of female unemployment are associated in these data with lower values of votes going to republican candidates. 
+
+Finally, we examine whether there are any gender interactions with labor force participation by plotting female labor force participation against republican vote share.
+
+```{r plot 4d, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette <- brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = final$femaleLaborForce, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleLaborForce, 
+                          y = final$republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleLaborForce, 
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = final$femaleLaborForce, 
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = final$femaleLaborForce, 
+                          y = final$republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleLaborForce,
+                          y = final$republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleLaborForce,
+                          y = final$republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = final$femaleLaborForce,
+                          y = final$republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics IV: 2004-2016") +
+  xlab("County Percent Female Labor Force Participation") +
+  ylab("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+Compared to the earlier chart of general labor force participation and votes for republican candidates, there seems to be a stronger relationship between female labor force participation and votes for republican candidates. In this case, higher female labor force participation is associated with fewer votes won by republican candidates. 
+
+The plots of economic conditions suggest that general unemployment and female labor force participation could be important determinants of voting behavior. This could indicate that when individuals observe high levels of unemployment in their neighborhoods, their friends and families or maybe even themselves out of work, they turn to parties whose discourse involves more emphasis on public employment and government investment in jobs, rather than tax cuts for businesses in the interest of encouraging businesses to hire or retain more people. Likewise, it appears there may be a gendered dimension to this phenomenon, given the differences in the plots of general labor force participation and female labor force participation. Given that the realtionship is more straongly negative for female labor force participation, it could be the case that women favor parties that in recent years have strongly supported regulation of businesses (at least in their discourses) over parties that favor de-regulation. On the other hand, these relationships appear weaker than associations between race and voting or family structure and voting, and therefore could reflect other mechanisms associated with voting patterns.   
+
+## CONCLUSION
+
+In this part of the project, we compared the percent of votes won by republican candidates to race, social class, gender and family structure, and economic conditions. These measures of social class do not seem like important determinants of voting behavior, while race, gender and family structure, and certain economic conditions appear as though they could be significantly related to electoral politics.      
+
+Interestingly, though the degree to which republican candidates capture vote share varries from year to year, the observed patterns are remarkably consistent over the 12 years represented herein. Ultimately, it seems that over time, the central differences in terms of electoral victory are geographic, not racial, familial, or economic. Given this conclusion, in the next section we map political outcomes by county accross the U.S. by county.
+
+## REFERENCES
+
+Adrian A. Dragulescu (2014). xlsx: Read, write, format Excel 2007 and Excel 97/2000/XP/2003 files. R package version 0.5.7. https://CRAN.R-project.org/package=xlsx
+
+Duncan Temple Lang and the CRAN Team (2016a). XML: Tools for Parsing and Generating XML Within R and S-Plus. R package version 3.98-1.4. https://CRAN.R-project.org/package=XML
+  
+Duncan Temple Lang and the CRAN team (2016b). RCurl: General Network (HTTP/FTP/...) Client Interface for R. R package version 1.95-4.8. https://CRAN.R-project.org/package=RCurl
+  
+Hadley Wickham (2009). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York. https://cran.r-project.org/web/packages/ggplot2/citation.html
+
+Hadley Wickham, Jim Hester and Romain Francois (2016). readr: Read Tabular Data. R package version 1.0.0. https://CRAN.R-project.org/package=readr
+  
+mnel. 2013. R Custom Legend for Multiple Layer GGPLOT. Retreived from http://stackoverflow.com/questions/18394391/r-custom-legend-for-multiple-layer-ggplot
+  
+Nolan, Deborah. County Votes 2004. Retrieved from http://www.stat.berkeley.edu/~nolan/data/voteProject/countyVotes2004.txt
+  
+Nolan, Deborah. Counties, Longitude and Latitude. Retrieved from http://www.stat.berkeley.edu/~nolan/data/voteProject/counties.gml
+  
+Politico. (2016). 2012 Presidential Election Results. Available from http://www.politico.com/2012-election/results/map/#/President/2012/
+
+Population Information of Jefferson County, Mississippi https://en.wikipedia.org/wiki/Jefferson_County,_Mississippi
+  
+Population Information of Buffalo County, South Dakota https://en.wikipedia.org/wiki/Buffalo_County,_South_Dakota
+  
+Population Information of Shannon County, South Dakota(aka Oglala Lakota County after 2015) https://en.wikipedia.org/wiki/Oglala_Lakota_County,_South_Dakota
+
+R Core Team (2016). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+  
+tonmcg. (2016). County-Level Election Results 12-16. Retrieved from https://github.com/tonmcg/County_Level_Election_Results_12-16/blob/master/2016_US_County_Level_Presidential_Results.csv
+  
+United States Census Bureau. (2016). American Fact-Finder. Available from https://factfinder.census.gov/faces/nav/jsf/pages/searchresults.xhtml?refresh=t
+
+United States presidential election results in California, 2004 https://en.wikipedia.org/wiki/United_States_presidential_election_in_California,_2004
+
+United States presidential election results in Florida, 2004 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Florida,_2004
+
+United States presidential election results in Hawaii, 2012 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Hawaii,_2012#By_county
+
+United States presidential election results in New York, 2012 https://en.wikipedia.org/wiki/United_States_presidential_election_in_New_York,_2008#By_county
+  
+United States presidential election results in Texas, 2004 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2004
+  
+United States presidential election results in Texas, 2008 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2008
+  
+United States presidential election results in Texas, 2012 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2012
+  
+United States presidential election results in Texas, 2016 https://en.wikipedia.org/wiki/United_States_presidential_election_in_Texas,_2016
+
+United States presidential election in Virginia, 2008 https://en.wikipedia.org/w/index.php?printable=yes&title=United_States_presidential_election_in_Virginia,_2008
