@@ -521,6 +521,33 @@ Compared to the earlier chart of general labor force participation and votes for
 
 The plots of economic conditions suggest that general unemployment and female labor force participation could be important determinants of voting behavior. This could indicate that when individuals observe high levels of unemployment in their neighborhoods, their friends and families or maybe even themselves out of work, they turn to parties whose discourse involves more emphasis on public employment and government investment in jobs, rather than tax cuts for businesses in the interest of encouraging businesses to hire or retain more people. Likewise, it appears there may be a gendered dimension to this phenomenon, given the differences in the plots of general labor force participation and female labor force participation. Given that the realtionship is more straongly negative for female labor force participation, it could be the case that women favor parties that in recent years have strongly supported regulation of businesses (at least in their discourses) over parties that favor de-regulation. On the other hand, these relationships appear weaker than associations between race and voting or family structure and voting, and therefore could reflect other mechanisms associated with voting patterns.   
 
+## Part 3 
+
+```{r}
+library(ggplot2)
+library(maps)
+library(RColorBrewer)
+
+countydata <- data.frame(fips = final$combined_fips, county_name = final$County, state = final$State, voteMargin = (final$ClintonVote2016 - final$TrumpVote2016) /(final$ClintonVote2016 + final$TrumpVote2016), stringsAsFactors = F)
+
+county_df <- map_data("county")
+names(county_df) <- c("long", "lat", "group", "order", "state_name", "county_name")
+county_df$state_name = gsub(" ", "", county_df$state_name)
+county_df$county_name = gsub(" ", "", county_df$county_name)
+county_df$state <- county_df$state_name
+county_df$state_name <- NULL
+state_df <- map_data("state")
+
+# Combine together 
+choropleth <- merge(county_df, countydata, by = c("state", "county_name"))
+choropleth <- choropleth[order(choropleth$order), ]
+# Discretize Margin
+choropleth$voteMargin <- cut_width(choropleth$voteMargin, 0.2)
+
+ggplot(choropleth, aes(long, lat, group = group)) +
+    geom_polygon(aes(fill = voteMargin)) + scale_fill_brewer(palette = "RdBu") + ggtitle("2016 Percentage Vote Margin by County")
+```
+
 ## CONCLUSION
 
 In this part of the project, we compared the percent of votes won by republican candidates to race, social class, gender and family structure, and economic conditions. These measures of social class do not seem like important determinants of voting behavior, while race, gender and family structure, and certain economic conditions appear as though they could be significantly related to electoral politics.      
