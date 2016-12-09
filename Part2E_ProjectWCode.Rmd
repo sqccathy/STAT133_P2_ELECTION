@@ -528,7 +528,7 @@ library(ggplot2)
 library(maps)
 library(RColorBrewer)
 
-countydata <- data.frame(fips = final$combined_fips, county_name = final$County, state = final$State, voteMargin = (final$ClintonVote2016 - final$TrumpVote2016) /(final$ClintonVote2016 + final$TrumpVote2016), stringsAsFactors = F)
+countydata <- data.frame(county_name = final$County, state = final$State, voteMargin = (final$ClintonVote2016 - final$TrumpVote2016) /(final$ClintonVote2016 + final$TrumpVote2016), stringsAsFactors = F)
 
 county_df <- map_data("county")
 names(county_df) <- c("long", "lat", "group", "order", "state_name", "county_name")
