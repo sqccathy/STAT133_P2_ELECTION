@@ -545,7 +545,7 @@ choropleth <- choropleth[order(choropleth$order), ]
 choropleth$voteMargin <- cut_width(choropleth$voteMargin, 0.2)
 
 ggplot(choropleth, aes(long, lat, group = group)) +
-    geom_polygon(aes(fill = voteMargin)) + scale_fill_brewer(palette = "RdBu") + ggtitle("2016 Percentage Vote Margin by County")
+    geom_polygon(aes(fill = voteMargin)) + scale_fill_brewer(palette = "RdBu", name = "Vote Margin: Red - Republican, Blue - Democrat") + ggtitle("2016 Percentage Vote Margin by County")
 ```
 
 ## CONCLUSION
