@@ -10,21 +10,30 @@ load("finalDataFrame.rda")
 We add one column in the dataframe that indicate which party was mostly voted by the county. Then we subset those dataframe,removing the names of the county and the election result in previous years. We want to use census data to predict the election results for 2016.
 ```{r}
 final$res2016 = final$ClintonVote2016>final$TrumpVote2016
+states = unique(final$State)
+set.seed(12345678)
+chooseTrain = unlist(lapply(states, function(x) {
+  Counties = which(final$State == x)
+  n = length(Counties)
+  if(n > 1)
+  sample = sample(Counties, ceiling(n / 2))
+  else sample = Counties
+  return(sample)
+}))
+chooseTrain = chooseTrain[seq(1500)]
 final = final[,-seq(1:12)]
 ```
 
 We split the data in to test part and train part.
 ```{r}
-nTotal = nrow(final)
-chooseTest = sample(nTotal, size = 404, replace = FALSE)
-finalTest = final[chooseTest, ]
-finalTrain = final[ -chooseTest, ]
+finalTest = final[-chooseTrain, ]
+finalTrain = final[chooseTrain, ]
 ```
 
 We want to use the cross-validation to train our model. We decide to split them into three folds.
 ```{r}
 set.seed(12344321)
-permuteIndices = sample(2700)
+permuteIndices = sample(length(chooseTrain))
 v = 3
 folds = matrix(permuteIndices,ncol = 3)
 ```
@@ -35,7 +44,7 @@ cps = c(seq(0.0001, 0.001, by = 0.0001),
        seq(0.001, 0.01, by = 0.001),
        seq(0.01, 0.1, by = 0.01))
 
-preds = matrix(nrow = 2700, ncol = length(cps))
+preds = matrix(nrow = length(chooseTrain), ncol = length(cps))
 library(rpart)
 for (i in 1:v) {
   trainFold = as.integer(folds[, -i])
@@ -59,7 +68,7 @@ After the cross-validation, we get the prediction result for the train set and b
 cvRates = apply(preds, 2, function(oneSet) {
   oneSet[which(oneSet == 1)] = "FALSE"
   oneSet[which(oneSet == 2)] = "TRUE"
-  sum(finalTrain$res2016 == oneSet)/2700
+  sum(finalTrain$res2016 == oneSet)/length(chooseTrain)
 })
 ```
 
@@ -72,22 +81,20 @@ ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
   labs(x = "Complexity Parameter", y = "Classification Rate")
 ```
 
-We choose a slightly bigger cp to build our final predictor. We train the model by randomly subset the whole dataframe and predict the result of the whole dataframe. Its accuracy rate is 0.92,which is behaving pretty well.
+We choose a best cp to build our final predictor. We train the model by randomly subset the whole dataframe and predict the result of the whole dataframe. Its accuracy rate is 0.92,which is behaving pretty well.
 ```{r}
-cpChoice = cvRes[which.max(cvRates)+2,1]
-rand = sample(1:3104,2000)
-finaltraindf = final[rand,]
+cpChoice = cvRes[which.max(cvRates)-6,1]
+# rand = sample(1:3104,2000)
+# finaltraindf = final[rand,]
 finalTree = rpart(res2016 ~ .,
-                  data = finaltraindf,
+                  data = finalTrain,
                   method = "class",
                   control = rpart.control(cp = cpChoice))
-
-#finalTree = knn(finalTrain,finalTest,res2016,3,prob = TRUE)   
 testPreds = predict(finalTree, 
-              newdata = final[,-31],
+              newdata = finalTest[,-31],
               type = "class")
 
-classRate = sum(testPreds == final$res2016) / nrow(final)
+classRate = sum(testPreds == finalTest$res2016) / nrow(finalTest)
 
 classRate
 ```
@@ -100,10 +107,10 @@ prp(finalTree, extra = 2)
 
 We want to figure out when the model makes mistakes. So we add the predict result into the dataframe as a column. There are four cases, which is predict true when it is true, predict false when it is true, predict false when it is false and predict true when it is false.
 ```{r}
-truetrue = final[which(testPreds==TRUE&final$res2016==TRUE),]
-falsefalse = final[which(testPreds==FALSE&final$res2016==FALSE),]
-truefalse = final[which(testPreds==TRUE&final$res2016==FALSE),]
-falsetrue = final[which(testPreds==FALSE&final$res2016==TRUE),]
+truetrue = finalTest[which(testPreds==TRUE&finalTest$res2016==TRUE),]
+falsefalse = finalTest[which(testPreds==FALSE&finalTest$res2016==FALSE),]
+truefalse = finalTest[which(testPreds==TRUE&finalTest$res2016==FALSE),]
+falsetrue = finalTest[which(testPreds==FALSE&finalTest$res2016==TRUE),]
 
 truetrue$pred = "righttrue"
 falsefalse$pred = "rightfalse"
@@ -113,8 +120,16 @@ falsetrue$pred = "wrongfalse"
 predfinal = rbind(truetrue,falsefalse,truefalse,falsetrue)
 ```
 
-From the tree I built above, the node laborForce doesn't have enough purity. It shows that false has 25 out of 39,and true has 87 out of 105. So I think the wrong predection may happen here. I make a plot to verify my guess. 
+A type I error is the incorrect rejection of a true null hypothesis (a "false positive"), while a type II error is incorrectly retaining a false null hypothesis (a "false negative").It turns out that the type I error is 0.07, the type II error is 0.02
 ```{r}
-ggplot(predfinal)+geom_density(mapping = aes(x = laborForce, color = pred))
+type1error = nrow(falsetrue)/nrow(predfinal)
+type2error = nrow(truefalse)/nrow(predfinal)
 ```
-It turns out that there are not much difference in laborforce rate between voting for Democratic and Republic. It means the laborforce and votes are not closely related. So when we make prediction based on laborforce, chances are that the predictor will make mistakes.
+
+From the tree I built above, the node femaleUnemployment doesn't have enough purity. It shows that false has 10/15 and true has 17/21. So I think the wrong predection may happen here. I make a plot to verify my guess. 
+```{r}
+ggplot(predfinal)+geom_density(mapping = aes(x = femaleUnemployment, color = pred))
+```
+
+It turns out that there are not much difference in femaleUnemployment between voting for Democratic and Republic. It means the femaleUnemployment and votes are not closely related. So when we make prediction based on femaleUnemployment, chances are that the predictor will make mistakes.
+
