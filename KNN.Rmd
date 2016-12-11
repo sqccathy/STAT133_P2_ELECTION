@@ -186,7 +186,7 @@ ggplot(data = final[, c("percentWhite", "singleMoms", "change1216")])+
   What's more, counties with lager percent of white people and smaller percent of single mothers tend to vote for republican, whether they stay voting for republican or they change to vote for republican, which corresponds to what we find in step 2.
 
   After finishing the KNN predictor, we remove the unnecessary intermediate variables.
-```{r}
+```{r echo = codeInclude}
 rm(final1, final2, final3, test_1, test_2, test_3, train_1, train_2, train_3, preds_1, preds_2,preds_3, errorRates_1, errorRates_2, errorRates_3)
 ```
 
