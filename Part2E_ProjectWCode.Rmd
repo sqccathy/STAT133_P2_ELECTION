@@ -1,6 +1,6 @@
 ---
 title: "Election Project, Part 2"
-author: "John Towey"
+author: "John Towey", "Victor Choi"
 output: html_document
 ---
 
