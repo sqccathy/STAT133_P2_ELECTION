@@ -523,13 +523,19 @@ The plots of economic conditions suggest that general unemployment and female la
 
 ## Part 3 
 
-```{r}
+```{r map packages, echo = codeInclude}
 library(ggplot2)
 library(maps)
 library(RColorBrewer)
+```
 
+In order to not add an additional column to the final data frame we created, we decided to make a data frame containing County name, State name, and voteMargin.
+```{r map data, echo = codeInclude}
 countydata <- data.frame(county_name = final$County, state = final$State, voteMargin = (final$ClintonVote2016 - final$TrumpVote2016) /(final$ClintonVote2016 + final$TrumpVote2016), stringsAsFactors = F)
+```
 
+Here we use the maps package, to merge with our data.
+```{r map merge, echo = codeInclude}
 county_df <- map_data("county")
 names(county_df) <- c("long", "lat", "group", "order", "state_name", "county_name")
 county_df$state_name = gsub(" ", "", county_df$state_name)
@@ -543,10 +549,21 @@ choropleth <- merge(county_df, countydata, by = c("state", "county_name"))
 choropleth <- choropleth[order(choropleth$order), ]
 # Discretize Margin
 choropleth$voteMargin <- cut_width(choropleth$voteMargin, 0.2)
+```
 
+We plot the vote margin by county level in 2016
+```{r map plot, echo = codeInclude}
 ggplot(choropleth, aes(long, lat, group = group)) +
     geom_polygon(aes(fill = voteMargin)) + scale_fill_brewer(palette = "RdBu", name = "Vote Margin: Red - Republican, Blue - Democrat") + ggtitle("2016 Percentage Vote Margin by County")
 ```
+
+In this graph, we plot the vote margins in each county during the 2016 Election. The color shade in each county gets darker as the vote margin increases, with red representing Republican and blue representing Democratic. 
+
+We see several trends occur during this election. First is that we see the number of counties that lean towards Republican in 2016, illustrated by this map, is much higher than the number of counties that lean towards Democratic. Although chose to not show population of each county in the map, for clarity reasons, we can see that in America, the majority of land area is Republican.
+
+Second, we see that there are clear bands of counties with very high vote margins in either sides. Highly Democratic-leaning bands are located on each coast, and a highly Republican-leaning band in the center. This may support a conclusion that geography plays a part in determining election results. People living on the coasts may have different concerns from people living in the center of the country, such as immigration, agricultural subsidies, job markets, and other varying topics. As such, each region's needs may resonate with the stance of a particular political party. We use this information to help locate a predictor in part 4.
+
+Lastly we see that the counties that lean towards either side often are clustered together. More rarely do we see a single outlying county surrounded by counties of the other party. As such, this may support a conclusion that counties affect the polital stance of the counties that surround it. We believe that this result may be due a combination of  migration, urbanization level, city size, or demographic in each region, and we use this information to help locate a predictor in part 4 as well.
 
 ## CONCLUSION
 
