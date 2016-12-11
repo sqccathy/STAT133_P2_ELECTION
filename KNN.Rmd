@@ -139,7 +139,8 @@ errorRates_3 = apply(preds_3, 2, function(x){
   Plot the error rates for the three ways of choosing features to find out which way is better, or say, which features are more influential on the results. 
 ```{r echo = codeInclude}
 library(ggplot2)
-ggplot(data = data.frame(kvalue = 1:k, errorRate = c(errorRates_1, errorRates_2, errorRates_3), choice = rep(c("Choice 1", "Choice 2", "Choice 3"), c(20, 20, 20))))+
+ggplot(data = 
+         data.frame(kvalue = 1:k, errorRate = c(errorRates_1, errorRates_2, errorRates_3), choice = rep(c("Choice 1", "Choice 2", "Choice 3"), c(20, 20, 20))))+
   geom_line(aes(kvalue, errorRate, col = choice))+
   scale_x_continuous(name = "kvalue")+
   scale_y_continuous(name = "error rate")+
@@ -167,9 +168,9 @@ ggplot(data =
 
   From the plot, it can be seen that it is proper to set the value of `k` to be 4, since the error rates for each classification are relatively small. 
   
-  Moreover, it also shows that the error rates for "DD" and "RR", which means that the voting results do not change, are smaller and those for "DR" and "RD", which means that counties do not vote as they did, are extremely big, even equal to 1. 
+  Moreover, it also shows that the error rates for "DD" and "RR", which means that the voting results do not change, are smaller and those for "DR" and "RD", which means that counties do not vote as they did, are extremely big, even equal to 1.  
   
-  We want to find the reasons for these changes and we assume that it is related to percent of white and percent of single mothers. Thus we make a scatter plot and color the points by classifications to see if there are some connections.
+  We want to find out the reasons and we assume that it is related to percent of white and percent of single mothers. Thus we make a scatter plot and color the points by classifications to see if there are some connections.
 ```{r echo = codeInclude}
 ggplot(data = final[, c("percentWhite", "singleMoms", "change1216")])+
   geom_point(aes(percentWhite, singleMoms, color = change1216), alpha = 0.15, position = 'jitter')+
