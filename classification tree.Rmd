@@ -1,14 +1,18 @@
 ---
 title: "rpart"
+author: "Qichen Sun"
 output: html_document
 ---
+```{r setup, echo = FALSE}
+codeInclude = FALSE
+```
 First we load the dataframe we get in first part.
-```{r}
+```{r echo = FALSE}
 load("finalDataFrame.rda")
 ```
 
 We add one column in the dataframe that indicate which party was mostly voted by the county. Then we subset those dataframe,removing the names of the county and the election result in previous years. We want to use census data to predict the election results for 2016.
-```{r}
+```{r echo = codeInclude}
 final$res2016 = final$ClintonVote2016>final$TrumpVote2016
 states = unique(final$State)
 set.seed(12345678)
@@ -25,13 +29,13 @@ final = final[,-seq(1:12)]
 ```
 
 We split the data in to test part and train part.
-```{r}
+```{r echo = codeInclude}
 finalTest = final[-chooseTrain, ]
 finalTrain = final[chooseTrain, ]
 ```
 
 We want to use the cross-validation to train our model. We decide to split them into three folds.
-```{r}
+```{r echo = codeInclude}
 set.seed(12344321)
 permuteIndices = sample(length(chooseTrain))
 v = 3
@@ -39,7 +43,7 @@ folds = matrix(permuteIndices,ncol = 3)
 ```
 
 We want to find the cp that will produce the highest precision. So we get a vector of cp and use for loop to try them out.
-```{r}
+```{r echo = codeInclude}
 cps = c(seq(0.0001, 0.001, by = 0.0001), 
        seq(0.001, 0.01, by = 0.001),
        seq(0.01, 0.1, by = 0.01))
@@ -64,7 +68,7 @@ for (i in 1:v) {
 ```
 
 After the cross-validation, we get the prediction result for the train set and by converting them into false and true, we are able to compare it with the true result and get the accuracy rate.
-```{r}
+```{r echo = codeInclude}
 cvRates = apply(preds, 2, function(oneSet) {
   oneSet[which(oneSet == 1)] = "FALSE"
   oneSet[which(oneSet == 2)] = "TRUE"
@@ -73,7 +77,7 @@ cvRates = apply(preds, 2, function(oneSet) {
 ```
 
 We make a plot to see which cp will produce the highest precision.It is going up for a while and going down after reaching it peak.
-```{r}
+```{r echo = codeInclude}
 library(ggplot2)
 cvRes = data.frame(cps, cvRates)
 ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
@@ -81,11 +85,9 @@ ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
   labs(x = "Complexity Parameter", y = "Classification Rate")
 ```
 
-We choose a best cp to build our final predictor. We train the model by randomly subset the whole dataframe and predict the result of the whole dataframe. Its accuracy rate is 0.92,which is behaving pretty well.
-```{r}
+We choose a best cp to build our final predictor. We train the model using the train dataset.The test prediction accuracy rate is 0.899,which is behaving pretty well.
+```{r echo = codeInclude}
 cpChoice = cvRes[which.max(cvRates)-6,1]
-# rand = sample(1:3104,2000)
-# finaltraindf = final[rand,]
 finalTree = rpart(res2016 ~ .,
                   data = finalTrain,
                   method = "class",
@@ -96,17 +98,16 @@ testPreds = predict(finalTree,
 
 classRate = sum(testPreds == finalTest$res2016) / nrow(finalTest)
 
-classRate
 ```
 
 We draw the tree to see how many levels do we have and which variables are used to predict.
-```{r}
+```{r echo = codeInclude}
 library(rpart.plot)
 prp(finalTree, extra = 2)
 ```
 
 We want to figure out when the model makes mistakes. So we add the predict result into the dataframe as a column. There are four cases, which is predict true when it is true, predict false when it is true, predict false when it is false and predict true when it is false.
-```{r}
+```{r echo = codeInclude}
 truetrue = finalTest[which(testPreds==TRUE&finalTest$res2016==TRUE),]
 falsefalse = finalTest[which(testPreds==FALSE&finalTest$res2016==FALSE),]
 truefalse = finalTest[which(testPreds==TRUE&finalTest$res2016==FALSE),]
@@ -121,15 +122,14 @@ predfinal = rbind(truetrue,falsefalse,truefalse,falsetrue)
 ```
 
 A type I error is the incorrect rejection of a true null hypothesis (a "false positive"), while a type II error is incorrectly retaining a false null hypothesis (a "false negative").It turns out that the type I error is 0.07, the type II error is 0.02
-```{r}
+```{r echo = codeInclude}
 type1error = nrow(falsetrue)/nrow(predfinal)
 type2error = nrow(truefalse)/nrow(predfinal)
 ```
 
 From the tree I built above, the node femaleUnemployment doesn't have enough purity. It shows that false has 10/15 and true has 17/21. So I think the wrong predection may happen here. I make a plot to verify my guess. 
-```{r}
+```{r echo = codeInclude}
 ggplot(predfinal)+geom_density(mapping = aes(x = femaleUnemployment, color = pred))
 ```
 
 It turns out that there are not much difference in femaleUnemployment between voting for Democratic and Republic. It means the femaleUnemployment and votes are not closely related. So when we make prediction based on femaleUnemployment, chances are that the predictor will make mistakes.
-
