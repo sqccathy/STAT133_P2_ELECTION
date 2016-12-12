@@ -1,0 +1,940 @@
+---
+title: "2016 Presidential Election Debrief Project"
+author: "John Towey, Menglu Cao, Jieni Wan, Qichen Sun, Victor Choi"
+output: html_document
+---
+
+```{r setup, echo = FALSE}
+codeInclude = TRUE
+```
+
+### Part 1: Introduction
+
+### Part 2: Data Description
+
+#### PRELIMINARY REMARKS 
+
+The goal for this section is to graphically explore possible interesting relationships between variables in the election data and variables in the census data.
+
+#### LOAD FINAL DATA FRAME FROM PART I AND GENERATE REPUBLICAN VOTE SHARE VARIABLE
+
+We start part two with the final data frame from the data wrangling, including all the merged data. We load the data frame and begin exploring it by plotting relationships that could be interesting. 
+
+```{r load data, echo = codeInclude}
+load("finalDataFrame.rda")
+```
+
+The first step here is to generate variables indicating the percent of the vote won by the republican candidate in each year of interest. We do this by dividing the number of votes won by the republican candidate by the sum of the votes won by either republican or democratic candidates. This excludes third parites, but with no victories since long before 2004, this seems like a reasonable operation.
+
+```{r generate variable, echo = codeInclude}
+final$republicanShare2016 = 
+  (final$TrumpVote2016 / (final$TrumpVote2016 + final$ClintonVote2016)) * 100
+
+final$republicanShare2012 = 
+  (final$RomneyVote2012 / (final$RomneyVote2012 + final$ObamaVote2012)) * 100
+
+final$republicanShare2008 = 
+  (final$MccainVote2008 / (final$MccainVote2008 + final$ObamaVote2008)) * 100
+
+final$republicanShare2004 =
+  (final$BushVote2004 / (final$BushVote2004 + final$KerryVote2004)) * 100
+```
+
+#### PLOT 1: RACE AND ELECTORAL POLITICS
+
+There has been much conversation about the role that race played in the 2016 election. The first plot demonstrates relationships between race and electorial politics by indicating the effect of the proportion of white residents in a county on republican vote share in the county. Ideally we would like to relate changes in electoral share to changes in demographic compositions, but with only 2010 census data, we must make the assumption that the proportion of white residents in counties does not significantly change between 2004 and 2016. It seems like the 2010 census data would be more representative of the 2008 and 2012 populations than the 2004 and 2016 populations. More research would be needed to verrify these results using data from, e.g., the American Community Survey program at the U.S. Census Bureau for specific election years. Ultimately, though, it seems reasonable to make the aforementioned assumption.  
+
+In order to make this comparison, we plot the percent of the county population that is white in 2010 on the x-axis and the percent of the vote won by the republican candidate on the y-axis. We first create a scatter plot and then layer one smoothed line per election year. The choice of smoothed line here is for readability and to ascertain the general relationship between these variables. The method chosen is "loess", and the span is .25 to give the lines some flex.
+
+```{r plot 1, echo = codeInclude}
+library(ggplot2)
+library(RColorBrewer)
+palette = brewer.pal(4, "Dark2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = percentWhite, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .1, position = 'jitter') +
+  geom_point(mapping = aes(x = percentWhite, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .07, position = 'jitter') +
+  geom_point(mapping = aes(x = percentWhite, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .05, position = 'jitter') +
+  geom_point(mapping = aes(x = percentWhite, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .01, position = 'jitter') +
+  geom_smooth(mapping = aes(x = percentWhite, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = percentWhite,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = percentWhite,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = percentWhite,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Race and Electoral Politics: 2004-2016") +
+  scale_x_continuous("Percent of County Population that is White") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot seems to indicate a positive relationship between the proportion of white residents in a county and the proportion of vote shares in the county going to the republican candidate. However, there seems to be more variability at higher values of both variables. Even so, the data seem to show that as the proportion of a county population that is white increases, the vote share going to the repubican candidate increases, and this is true for all four selected election years. In counties with higher proportions of white residents, the vote share going to republican candidates is higher in 2016, and lower in 2008. Moreover, because race and social class are so closely linked, it is not possible to conclude that being white, rather than being wealthy or living in a wealthy county, is driving voting. The following plots will attempt to explore class relations. 
+
+#### PLOT 2: SOCIAL CLASS AND ELECTORAL POLITICS
+
+While there is no variable in our census data that explicitly classifies social groups, we think that certain variables give some indication of the general social class of a county. On the one hand, individuals classified in management, business, science, and arts occupations would tend to have higher educations and salaries than those classified in other occupations. However, we also think that individuals classified into professional, scientific, and management, and administrative and waste management services industries would tend to have higher income and educations than others. We thus select the percent employed in higher status occupations and higher status industries as two different indicators of the social class of a county, with higher proportions of residents in these occupations or industries indicating a higher proportion of residents in a county being middle class or higher. And again, we compare these indicators to the proportion of the county vote won by the republican candidate in each year of interest with a set of smoothed lines layered over a scatterplot. Parameters for the scatter plots and the smoothing are identical to Plot 1 to facilitate comparison.  
+
+First we take the percent of individuals in management, business, science, and arts occupations.
+
+```{r plot 2a, echo = codeInclude}
+palette = brewer.pal(4, "Set1")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = occManagement, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = occManagement, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = occManagement, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = occManagement, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = occManagement, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = occManagement,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = occManagement,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = occManagement,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Class and Electoral Politics I: 2004-2016") +
+  scale_x_continuous("Percent of County Population Whose Occupation\n is Management, Business, Science, or Arts") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The scatter plot points are clumped in the middle of this plot, with the smoothed lines describing a lazy, concave-down arc through the plot region. From left to right the smoothed lines first have a positive angle, then are mostly flat, and then have a negative slope. This could indicate a non-linear relationship, or no relationship between these variables.   
+
+Next we will explore industrial effects, rather than occupational effects.
+
+```{r plot 2b, echo = codeInclude}
+palette = brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = professionalIndustries, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = professionalIndustries, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = professionalIndustries, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = professionalIndustries, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = professionalIndustries, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = professionalIndustries,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = professionalIndustries,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = professionalIndustries,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Class and Electoral Politics II: 2004-2016") +
+  scale_x_continuous("Percent of County Population Whose Industry is Professional, Scientific,\n and Management, and Administrative and Waste Management Services") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The plot of republican vote share by employment share of high-status industries shows there may be a weak negative relationship, given the layer of smoothed lines sloping down and to the right through the largest part of the scatterplot. This indicates, that for counties on the lower end of the scale measuring the percent employed in these industries, higher proportions of high-status employment would be associated with a lower share of votes going to the republican candidate. This is possible, but more research is needed given that the realtionship seems to flatten out at higher values of employment in these industries. 
+
+What is clear from both of the plots that attempt to show how social class and voting behaviors are related, is that these are not good variables to use for plotting like this, because they do not vary very much. For both occupational and industrial classification, the vast majority of counties have very similar rates of employment, and with little differentiation in counties by employment, it is difficult to make a case one way or another that social class, as measured by employment in high-status occupations or industries, affects voting behavior. To further explore possible realtionships, we turn now to gender and family structure.   
+
+#### PLOT 3: GENDER, FAMILY STRUCTURE, AND ELECTORAL POLITICS
+
+It is widely known that in addition to race and social class, one of the predominant dimensions of variation of the social world is gender. Specific to our data from the census bureau, we identify the percent of single mothers in a county as capturing dimensions of both gender and family structure--to the extent that singel parenthood is largely a gendered phenomenon, with single motherhood being much more common than single fatherhood. Another important facet of gender and family structure is bachelorhood. Un-married men experience hardship differently than married men. In our dataset, we think the variable describing the percent of never-married men in a county captures this dimension of social life.
+
+The first plot relates the percent of single-mother-families in a county to, again, the county vote share won by the republican canididate in each of our four selected election years. We overlay smoothed lines on a scatter plot, as in the two previous sections, and as before, the paramaters for the scatterplot and smoothed lines are identical to Plot 1 to facilitate comparison. 
+
+```{r plot 3a, echo = codeInclude}
+palette = brewer.pal(4, "Set3")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = singleMoms, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = singleMoms, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = singleMoms, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = singleMoms, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = singleMoms, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = singleMoms,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = singleMoms,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = singleMoms,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Gender, Family Structure, and Electoral Politics I: 2004-2016") +
+  scale_x_continuous("Percent of Single Mothers in County") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The smoothed lines of this plot clearly slope down and to the right. This indicates that as the percentage of single mothers in a county increases, the vote share won by the republican candidate decreases. This is true for all four election years, though at slightly difference levels. 
+
+The second plot relates the percent of families in a county composed of un-married men to the county vote share won by the republican candidate in each election year. Parameters for the scatter plot and smoothed lines are identical to previous plots. 
+
+```{r plot 3b, echo = codeInclude} 
+palette = brewer.pal(4, "Dark2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = neverMarriedMen, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = neverMarriedMen, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = neverMarriedMen, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = neverMarriedMen, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = neverMarriedMen, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = neverMarriedMen,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = neverMarriedMen,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = neverMarriedMen,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Gender, Family Structure, and Electoral Politics II: 2004-2016") +
+  scale_x_continuous("Percent of Never-Married Men in County") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot also indicates a negative relationship between these variables. The Northwest to Southeast orientation of the scatterplot and the seemingly downward-right sloping smoothed lines through the largest portion of the scatterplot appears to indicate that as the proportion of never-married men in a county increases, the vote share won by the republican candidate decreases. 
+
+The above findings could idicate that gender and family structure may be important determinants of voting behavior. Both single mothers and never-married men appear to be less likely to vote for republican candidates. This could be an indication of the strength of so-called "family values"" among conservative individuals, or there could be something else going on. The last relationships we will explore compare economic conditions with voting behavior. 
+
+#### PLOT 4: ECONOMIC CONDITIONS AND ELECTORAL POLITICS
+
+The primary concern for the average voter vis-a-vis the economy seems to be employment. Discourse on jobs has been a central fixture of elections for as long as we can remember. Given the importance of employment to elections, it is interesting to see how employment translates into voting behavior. We use county unemployment and labor force participation rates, as well as female unemployment and labor force participation rates, to examine economic conditions that the average voter might encounter. We do not look at employment in specific occupational or industrial categories, given the apparent lack of relationship we observed in Plot 2. 
+
+First, we plot the vote share won by republican candidates by the percent of unemployed individuals in counties. We use the same parameters for scatter plots and smoothed lines as in every previous plot. 
+
+```{r plot 4a, echo = codeInclude}
+palette = brewer.pal(4, "Set1")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = unemployed, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = unemployed, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = unemployed, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = unemployed, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = unemployed, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = unemployed,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = unemployed,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = unemployed,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics I: 2004-2016") +
+  scale_x_continuous("County Percent Unemployed") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+The scatter plot and the smoothed lines slope mainly from the upper-left to the bottom right. This indicates a negative relationship, in which counties with higher unemployment rates are associated with lower vote share won by republican candidates. 
+
+Next we examine the relationship between labor force participation and vote share won by republican candidates. 
+
+```{r plot 4b, echo = codeInclude}
+palette = brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = laborForce, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = laborForce, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = laborForce, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = laborForce, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = laborForce, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = laborForce,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = laborForce,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = laborForce,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics II: 2004-2016") +
+  scale_x_continuous("County Percent Labor Force Participation") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This relationship appears much weaker. The scatter plot clumps in the center of the chart, while the smoothed lines run primarily accross the chart horizontally. There is a slight concave-down arch to the smoothed lines, and through the densest part of the scatter plot the smoothed lines may have a slight slope down and to the right. This indicates that there may be a very weak negative relationship between these variables. However, we do not think that labor force parrticipation, by itself, offers much explanatory power in relation to voting behavior. 
+
+Next, we examine how economic conditions and gender may interact. We plot female unemployment rates on the x axis and republican vote share on the y axis. 
+
+```{r plot 4c, echo = codeInclude}
+palette = brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = femaleUnemployment, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleUnemployment, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleUnemployment, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleUnemployment, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = femaleUnemployment, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleUnemployment,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleUnemployment,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleUnemployment,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics III: 2004-2016") +
+  scale_x_continuous("County Percent Female Unemployed") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+This plot is not substantially different from the plot of the relationship between general unemployent and republican vote share. Again, there seems to be negative relationship between these variables. Higher values of female unemployment are associated in these data with lower values of votes going to republican candidates. 
+
+Finally, we examine whether there are any gender interactions with labor force participation by plotting female labor force participation against republican vote share.
+
+```{r plot 4d, echo = codeInclude}
+palette = brewer.pal(4, "Set2")
+ggplot(data = final) +
+  geom_point(mapping = aes(x = femaleLaborForce, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+             alpha = .4, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleLaborForce, 
+                          y = republicanShare2012, 
+                          color = '2012'),
+             alpha = .3, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleLaborForce, 
+                          y = republicanShare2008, 
+                          color = '2008'),
+             alpha = .2, position = 'jitter') +
+  geom_point(mapping = aes(x = femaleLaborForce, 
+                          y = republicanShare2004, 
+                          color = '2004'),
+             alpha = .05, position = 'jitter') +
+  geom_smooth(mapping = aes(x = femaleLaborForce, 
+                          y = republicanShare2016, 
+                          color = '2016'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleLaborForce,
+                          y = republicanShare2012, 
+                          color = '2012'), 
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleLaborForce,
+                          y = republicanShare2008, 
+                          color = '2008'),
+              method = "loess", span = .25, se = FALSE) +
+  geom_smooth(mapping = aes(x = femaleLaborForce,
+                          y = republicanShare2004, 
+                          color = '2004'),
+              method = "loess", span = .25, se = FALSE) +
+  ggtitle("Economic Conditions and Electoral Politics IV: 2004-2016") +
+  scale_x_continuous("County Percent Female Labor Force Participation") +
+  scale_y_continuous("Percent of County Vote Going to Republican Candidate") +
+  scale_colour_manual(name = 'Election Year', 
+         values =c('2016' = palette[1], '2012' = palette[2],
+                   '2008' = palette[3], '2004' = palette[4]), 
+         labels = c('2016' = '2016', '2012' = '2012',
+                    '2008' = '2008', '2004' = '2004'))
+```
+
+Compared to the earlier chart of general labor force participation and votes for republican candidates, there seems to be a stronger relationship between female labor force participation and votes for republican candidates. In this case, higher female labor force participation is associated with fewer votes won by republican candidates. 
+
+The plots of economic conditions suggest that general unemployment and female labor force participation could be important determinants of voting behavior. This could indicate that when individuals observe high levels of unemployment in their neighborhoods, their friends and families or maybe even themselves out of work, they turn to parties whose discourse involves more emphasis on public employment and government investment in jobs, rather than tax cuts for businesses in the interest of encouraging businesses to hire or retain more people. Likewise, it appears there may be a gendered dimension to this phenomenon, given the differences in the plots of general labor force participation and female labor force participation. Given that the realtionship is more straongly negative for female labor force participation, it could be the case that women favor parties that in recent years have strongly supported regulation of businesses (at least in their discourses) over parties that favor de-regulation. On the other hand, these relationships appear weaker than associations between race and voting or family structure and voting, and therefore could reflect other mechanisms associated with voting patterns.
+
+#### CONCLUSION of Data Description
+
+In this part of the project, we compared the percent of votes won by republican candidates to race, social class, gender and family structure, and economic conditions. These measures of social class do not seem like important determinants of voting behavior, while race, gender and family structure, and certain economic conditions appear as though they could be significantly related to electoral politics.      
+
+Interestingly, though the degree to which republican candidates capture vote share varries from year to year, the observed patterns are remarkably consistent over the 12 years represented herein. Ultimately, it seems that over time, the central differences in terms of electoral victory are geographic, not racial, familial, or economic. Given this conclusion, in the next section we map political outcomes by county accross the U.S. by county.
+
+### Part 3: MAP MAKING
+
+In order to not add an additional column to the final data frame we created(it might interfere with the model building), we have decided to make a data frame containing County name, State name, and voteMargin.
+```{r map data, echo = codeInclude}
+countydata = data.frame(county = final$County, state = final$State, voteMargin = (final$ClintonVote2016 - final$TrumpVote2016) /(final$ClintonVote2016 + final$TrumpVote2016), stringsAsFactors = F)
+```
+
+Here we use the maps package, to merge with our data.
+```{r map merge, echo = codeInclude}
+library(maps)
+county_df = map_data("county")
+names(county_df) = c("long", "lat", "group", "order", "state", "county")
+county_df$state = gsub(" ", "", county_df$state)
+county_df$county = gsub(" ", "", county_df$county)
+
+# Combine together 
+choropleth = merge(county_df, countydata, by = c("state", "county"))
+choropleth = choropleth[order(choropleth$order), ]
+
+# Discretize Margin
+choropleth$voteMargin = cut_width(choropleth$voteMargin, 0.2)
+```
+
+We plot the vote margin by county level in 2016.
+```{r map plot, echo = codeInclude}
+ggplot(choropleth) +
+    geom_polygon(aes(x = long, y = lat, group = group, fill = voteMargin)) +
+    scale_fill_brewer(palette = "RdBu", name = "Vote Margin: Red - Republican, Blue - Democrat") +
+    ggtitle("2016 Percentage Vote Margin by County")
+```
+
+In this graph, we plot the vote margins in each county during the 2016 Election. The color shade in each county gets darker as the vote margin increases, with red representing Republican and blue representing Democratic. 
+
+We see several trends occur during this election. First is that we see the number of counties that lean towards Republican in 2016, illustrated by this map, is much higher than the number of counties that lean towards Democratic. Although chose to not show population of each county in the map, for clarity reasons, we can see that in America, the majority of land area is Republican.
+
+Second, we see that there are clear bands of counties with very high vote margins in either sides. Highly Democratic-leaning bands are located on each coast, and a highly Republican-leaning band in the center. This may support a conclusion that geography plays a part in determining election results. People living on the coasts may have different concerns from people living in the center of the country, such as immigration, agricultural subsidies, job markets, and other varying topics. As such, each region's needs may resonate with the stance of a particular political party. We use this information to help locate a predictor in part 4.
+
+Lastly we see that the counties that lean towards either side often are clustered together. More rarely do we see a single outlying county surrounded by counties of the other party. As such, this may support a conclusion that counties affect the polital stance of the counties that surround it. We believe that this result may be due a combination of  migration, urbanization level, city size, or demographic in each region, and we use this information to help locate a predictor in part 4 as well.
+
+### Part 4: PREDICTING THE 2016 RESULTS
+
+In this part, we use the classification tree to predict the 2016 election results, with census information as features. First, we add one column to the final data frame that indicates which party won in each county in 2016. If the element in this column is TRUE, it means the county voted for the Democratic party. 
+
+Note that when we randomly divide the counties into the train and test sets, there is every possibility that most counties in one state fall into the test set. In this case, there are so few counties in this state that the predictor may not function well. Hence, we have decided that when dividing the counties to two parts, we will do this by stratifying across states first. That is to say, we will take half counties of each state out to the test set. 
+```{r echo = codeInclude}
+load("finalDataFrame.rda")
+final$res2016 = final$ClintonVote2016 > final$TrumpVote2016
+states = unique(final$State)
+set.seed(12345678)
+chooseTrain = unlist(lapply(states, function(x) {
+  Counties = which(final$State == x)
+  n = length(Counties)
+  if(n > 1)
+  sample = sample(Counties, ceiling(n / 2))
+  else sample = Counties
+  return(sample)
+}))
+```
+
+We find that the length of chooseTrain is 1565, which can neither by divided by 2 nor 3. So we truncate this vector. Then we drop county names, state names and the election results in previous years, and call this new data frame final1.
+```{r echo = codeInclude}
+chooseTrain = chooseTrain[1:1563]
+final1 = final[, -(1:12)]
+```
+
+We split the data into 2 sets, namely the test set and the train set.
+```{r echo = codeInclude}
+finalTest = final1[-chooseTrain, ]
+finalTrain = final1[chooseTrain, ]
+```
+
+We want to use the cross-validation to train our model. We decide to split them into three folds.
+```{r echo = codeInclude}
+set.seed(12344321)
+permuteIndices = sample(length(chooseTrain))
+v = 3
+folds = matrix(permuteIndices, ncol = 3)
+```
+
+We want to find the cp that will produce the highest precision. So we set a vector of different values for `cp`. We use a double loop, over the folds and the complexity parameter values to get our predictions.
+```{r echo = codeInclude}
+cps = c(seq(0.0001, 0.001, by = 0.0001), 
+       seq(0.001, 0.01, by = 0.001),
+       seq(0.01, 0.1, by = 0.01))
+
+preds = matrix(nrow = length(chooseTrain), ncol = length(cps))
+library(rpart)
+for (i in 1:v) {
+  trainFold = as.integer(folds[, -i])
+  testFold = folds[, i]
+  
+  for (j in 1:length(cps)) {
+    tree = rpart(res2016 ~ .,
+            data = finalTrain[trainFold,],
+            method = "class",
+            control = rpart.control(cp = cps[j]))
+    preds[testFold,j] =
+      predict(tree,
+              newdata = finalTrain[testFold,-length(testFold)],
+              type = "class")
+  }
+}
+```
+
+After the cross-validation, we get the prediction result for the train set and by converting them into TRUE and FALSE, we are able to compare it with the truth and get the accuracy rate.
+```{r echo = codeInclude}
+cvRates = apply(preds, 2, function(oneSet) {
+  oneSet[which(oneSet == 1)] = "FALSE"
+  oneSet[which(oneSet == 2)] = "TRUE"
+  sum(finalTrain$res2016 == oneSet) / length(chooseTrain)
+})
+```
+
+From our plot and the following statistics, choose a value for `cp`. 
+```{r echo = codeInclude}
+which.max(cvRates)
+
+cvRes = data.frame(cps, cvRates)
+ggplot(data = cvRes, aes(x = cps, y = cvRates)) +
+  geom_line() + 
+  labs(x = "Complexity Parameter", y = "Classification Rate")
+```
+
+Select cp = 0.03. Then we build the predictor with the chosen `cp` on our train set. 
+```{r echo = codeInclude}
+cpChoice = 0.03
+finalTree = rpart(res2016 ~ .,
+                  data = finalTrain,
+                  method = "class",
+                  control = rpart.control(cp = cpChoice))
+testPreds = predict(finalTree, 
+              newdata = finalTest[, -31],
+              type = "class")
+
+classRate = sum(testPreds == finalTest$res2016) / nrow(finalTest)
+
+classRate
+```
+
+The classification rate for the test is 0.892, which means that our predictor behaves fairly well in general.
+
+We draw the tree to see the tree's depth and which variables are used.
+```{r echo = codeInclude}
+library(rpart.plot)
+prp(finalTree, extra = 2)
+```
+
+### Part 5: Predicting the Change from 2012 to 2016
+
+We use the k nearest method to build a predictor for the election result change from 2012 to 2016, i.e., we'll predict whether a county will stay voting for the Democratic/Republican party, or it will swing from Democratic to Republican, or the other way around. To meet this end, we will be using the k nearest neighbor algorithm.
+
+#### Data Frame Manipulation
+
+First, we will generate the observations for the change. We call this variable "change1216", and add it to our data frame.
+```{r echo = codeInclude}
+final$change1216 = character(nrow(final))
+
+final$change1216[(final$ObamaVote2012 > final$RomneyVote2012) & (final$ClintonVote2016 > final$TrumpVote2016)] = "DD"
+
+final$change1216[(final$ObamaVote2012 > final$RomneyVote2012) & (final$ClintonVote2016 < final$TrumpVote2016)] = "DR"
+
+final$change1216[(final$ObamaVote2012 < final$RomneyVote2012) & (final$ClintonVote2016 > final$TrumpVote2016)] = "RD"
+
+final$change1216[(final$ObamaVote2012 < final$RomneyVote2012) & (final$ClintonVote2016 < final$TrumpVote2016)] = "RR"
+
+final$change1216 = as.factor(final$change1216)
+```
+
+By saying neighbors of a particular county, we mean that they share similar characteristics with this county. These charateristics, not only including geographic information, but also other features concerning family, economy and population. The definition of neighbors in this case is based on our expectation that counties sharing alike features are more likely to behave similarly. According to the findings in Step 2, here we choose 6 features which we assume have significant influence upon the results, namely percent of white population, percent of the civilian labor force employed in professional, scientific, management, administrative and waste management services industries, percent of single mothers, percent of unemployment, percent of unemployed women and percent of never married men. 
+  
+Also, we add some other features that we assume may have influence on the results. To figure out which features are more influential, we change the combination of features and compute the error rates respectively.
+  
+Similarly, we include state information in the new data frames.
+```{r echo = codeInclude}
+final1 = final[c("State", "Latitude", "Longitude", "maleHouseholder", "livingAlone", "percentWhite", "femaleUnemployment", "neverMarriedMen", "singleMoms", "professionalIndustries", "unemployed")]
+
+final2 = final[c("State", "Latitude", "Longitude", "marriedcouples", "familiesWithKids", "percentWhite", "femaleUnemployment", "neverMarriedMen", "singleMoms", "professionalIndustries", "unemployed")]
+
+final3 = final[c("State", "Latitude", "Longitude", "constructionIndustry", "avgFamilySize", "percentWhite", "femaleUnemployment", "neverMarriedMen", "singleMoms", "professionalIndustries", "unemployed")]
+```
+
+Also, we find that the latitude and longitude are of the class character. Thus we turn them into numerics, for otherwise we cannot calculate the distances between counties based on geographic information.
+```{r}
+final1$Latitude = as.numeric(final1$Latitude)
+final1$Longitude = as.numeric(final1$Longitude)
+
+final2$Latitude = as.numeric(final2$Latitude)
+final2$Longitude = as.numeric(final2$Longitude)
+
+final3$Latitude = as.numeric(final3$Latitude)
+final3$Longitude = as.numeric(final3$Longitude)
+```
+  
+Note that here we need a distance matrix, meaning the features that decide the distances have to be of the same scale. Therefore we normalize these variables.
+```{r}
+final1[-1] = sapply(final1[-1], function(x) (x - mean(x)) / sd(x))
+
+final2[-1] = sapply(final2[-1], function(x) (x - mean(x)) / sd(x))
+
+final3[-1] = sapply(final3[-1], function(x) (x - mean(x)) / sd(x))
+``` 
+
+
+#### Train and Test Data
+
+As we discussed before, we want to "randomly" place some counties in the test set, but we also want to make sure that each state has enough counties in the train set. For each state, we find all the counties in it, and then sample these rows for the train set. After this step we can drop the state variable.
+  
+Notice that we do not need to sample rows for the train set again. Since we are making comparisons, we just need to change the features and keep the other factors the same, including the train and test sets. 
+```{r echo = codeInclude}
+states = unique(final1$State)
+set.seed(12345678)
+chooseTrain2 = unlist(lapply(states, function(x) {
+  Counties = which(final1$State == x)
+  n = length(Counties)
+  if(n > 1)
+  sample = sample(Counties, ceiling(n / 2))
+  else sample = Counties
+  return(sample)
+}))
+
+final1 = final1[, -1]
+final2 = final2[, -1]
+final3 = final3[, -1]
+```
+
+Now that we already have the county index for the train test, we can now divide the data frame final1 apart. Let's call the test set, `test_1`, `test_2` and `test_3`, and the train set, `train_1`, `train_2` and `train_3`. Also, we call the truth of the train set `trainTruth` and the truth of the test set `testTruth`.
+```{r echo = codeInclude}
+train_1 = final1[chooseTrain2, ]
+test_1 = final1[-chooseTrain2, ]
+
+train_2 = final2[chooseTrain2, ]
+test_2 = final2[-chooseTrain2, ]
+
+train_3 = final3[chooseTrain2, ]
+test_3 = final3[-chooseTrain2, ]
+
+trainTruth = final[chooseTrain2, "change1216"]
+testTruth = final[-chooseTrain2, "change1216"]
+```
+  
+#### Building the K-NN Predictor
+
+Next, We want to build a predictor using the K-NN method for several values of the tuning parameter `k`. We can compare the truth with the predictions by calculating error rates and select a proper value for `k` to make the error rates relatively small.
+  
+Here, we make different groups of predictions for the test set based on the train set by setting this parameter from 1 to 20. The predictions corresponding to different `k` for each case are put into the matrices, `preds_1`, `preds_2` and `preds_3`.  
+```{r echo = codeInclude}
+k = 20
+preds_1 = matrix(nrow = nrow(test_1), ncol = k)
+preds_2 = matrix(nrow = nrow(test_2), ncol = k)
+preds_3 = matrix(nrow = nrow(test_3), ncol = k)
+
+library(class)
+for (j in 1:k){
+  preds_1[, j] = knn(train_1, test_1, trainTruth, j)
+  preds_2[, j] = knn(train_2, test_2, trainTruth, j)
+  preds_3[, j] = knn(train_3, test_3, trainTruth, j)
+} 
+```
+
+Next, we compute the error rates for each `k`.
+  
+Notice that the predictions are numbers, 1, 2, 3, 4, which stand for "DD", "DR", "RD" and
+"RR" respectively, whereas the type of truth is factor. Thus, we first convert `testTruth` to a numeric vector.
+```{r echo = codeInclude}
+testTruth = as.numeric(testTruth)
+
+errorRates_1 = apply(preds_1, 2, function(x){
+  sum(x != testTruth)/length(testTruth)
+})
+
+errorRates_2 = apply(preds_2, 2, function(x){
+  sum(x != testTruth)/length(testTruth)
+})
+
+errorRates_3 = apply(preds_3, 2, function(x){
+  sum(x != testTruth)/length(testTruth)
+})
+```
+
+Plot the error rates for the three ways of choosing features to find out which way is better, or say, which features are more influential on the results. 
+```{r echo = codeInclude}
+ggplot(data = data.frame(kvalue = 1:k, errorRate = c(errorRates_1, errorRates_2, errorRates_3), choice = rep(c("Choice 1", "Choice 2", "Choice 3"), c(20, 20, 20))))+
+  geom_line(aes(kvalue, errorRate, col = choice))+
+  scale_x_continuous(name = "kvalue")+
+  scale_y_continuous(name = "error rate")+
+  ggtitle("Error rates under the three choices")
+```
+  
+The plot shows that the error rates under the second choice are always smaller than those under the other choices. Therefore, we decide to choose the varibles, "Latitude", "Longitude", "marriedcouples", "familiesWithKids" as our influential features.
+  
+By computing the error rates, We can see how many predictions are different from the truth in total. However, considering that the number of the counties that stay voting for the Democratic/Republican party is large and what we care about is the swing counties, it is better to calculate error rates for each classification.  
+```{r echo = codeInclude}
+errorRates = numeric()
+for(i in 1:4){
+  errorRates = c(errorRates, apply(preds_2, 2, function(x) {
+  sum(x[testTruth == i] != i) / length(x[testTruth == i])
+}))
+}
+
+ggplot(data = 
+         data.frame(kvalue = 1:k, errorRates, class = rep(c("DD", "DR", "RD", "RR"), c(20, 20, 20, 20))))+
+  geom_line(aes(x = kvalue, y = errorRates, color = class))+
+  scale_x_continuous(name = "k value")+
+  scale_y_continuous(name = "error rate")+
+  ggtitle("Error rates for each classification")
+```
+
+From the plot, it can be seen that it is proper to set the value of `k` to be 4, since the error rates for each classification are relatively small. 
+```{r echo = codeInclude}
+preds = preds_2[, 4]
+```
+
+### Part 6: DISCUSSION
+
+#### Predictor for Election Result in 2016
+In this section we will examine how our 2 predictors perform. First we'll analyze the decision tree.
+
+Based on the binary tree we constructed, we can get a sense of what kinds of counties would go Dem or Rep in 2016.
+
+Counties that tend to vote for Rep have the following traits:
+
+- Smaller size in terms of total population
+- Higher Percentage of married couples
+- Lower percentage of never married males
+
+Adversely, counties that tend to vote for Dem have the following traits:
+
+- Larger population
+- Lower percentage of married couples
+- Higher percent of never married males
+
+Then, naturally We will want to figure out where the model did well and poorly. For this purpose, we would need to split the error up into different types. So we add the prediction results, i.e., what the prediction is and whether it is right, into the data frame as a column. There are four cases, which are predict dem when the truth is dem, predict rep when the truth is rep, predict dem when the truth is rep and predict rep when the truth is dem.
+```{r echo = codeInclude}
+finalTest$pred = 0
+finalTest$pred[testPreds == TRUE & finalTest$res2016 == TRUE] = "demRight"
+finalTest$pred[testPreds == FALSE & finalTest$res2016 == FALSE] = "repRight"
+finalTest$pred[testPreds == TRUE & finalTest$res2016 == FALSE] = "demWrong"
+finalTest$pred[testPreds == FALSE & finalTest$res2016 == TRUE] = "repWrong"
+```
+
+A type I error is the incorrect rejection of a true null hypothesis. In this case, it means the truth is the county voted for Democrat, while the prediction gives Republican. On the contrary, a type II error is incorrectly retaining a false null hypothesis. Similarly, in this case it means the predcitor gives Democrat when as a matter of fact, this county voted for Republican.
+```{r echo = codeInclude}
+type1error = nrow(finalTest[finalTest$pred == "repWrong", ]) / 
+    (nrow(finalTest[finalTest$pred == "repWrong", ]) + 
+     nrow(finalTest[finalTest$pred == "demRight", ]))
+type2error = nrow(finalTest[finalTest$pred == "demWrong", ]) / 
+    (nrow(finalTest[finalTest$pred == "demWrong", ]) + 
+     nrow(finalTest[finalTest$pred == "repRight", ]))
+type1error
+type2error
+```
+
+It turns out that the type I error is 0.438, and the type II error is 0.049. Clearly, our predictor performs very well for the counties which voted for the Republican party. Nevertheless, it tends to make mistakes for the counties voting for the Democratic party. We want to see exactly where the model did well or poorly. So we add the coordinate information to finalTest and make a map.
+```{r echo = codeInclude}
+finalTest$lat = as.numeric(final$Latitude)[-chooseTrain]
+finalTest$long = as.numeric(final$Longitude)[-chooseTrain]
+
+ggplot(finalTest) +
+  borders("state", colour= "gray80", fill = "gray80") +
+  geom_point(aes(x = long, y = lat, color = pred, alpha = 0.2)) +
+  scale_x_continuous("Longitude") +
+  scale_y_continuous("Latitude")
+```
+
+As the graph shows, our predictor did pretty well on the middle America where the most counties chose to vote for Rep. However, our tree did not perform well for some counties in the east coast, southern part of the country, and the area around the Great Lakes.
+
+#### Predictor for Change from 2012 to 2016
+Then, we'll look at the k-nn method for predicting the change from 2012 to 2016. 
+
+From the graph titled "Error rates for each classification", the error rates for "DD" and "RR", which means that the voting results do not change, are smaller and those for "DR" and "RD", which means that counties do not vote as they did, are extremely big, even equal to 1. 
+  
+We want to find the reasons for these prediction errors and we assume that it is related to percent of white and percent of single mothers. Thus we find out the counties where the predictions are different from the true vote results and seperate them into 4 groups by classifications, namely, "DD", "DR", "RD" and "RR". Then we make a scatter plot and color the points by classifications to see if there are some connections.
+```{r echo = codeInclude}
+test = final[-chooseTrain2, c("percentWhite", "singleMoms", "change1216")]
+
+truth_DD = test[testTruth == 1, ]
+error_DD = truth_DD[preds[testTruth == 1] != 1, ]
+
+truth_DR = test[testTruth == 2, ]
+error_DR = truth_DR[preds[testTruth == 2] != 2, ]
+
+truth_RD = test[testTruth == 3, ]
+error_RD = truth_RD[preds[testTruth == 3] != 3, ]
+
+truth_RR = test[testTruth == 4, ]
+error_RR = truth_RR[preds[testTruth == 4] != 4, ]
+
+error = rbind(error_DD, error_DR, error_RD, error_RR)
+error$cl = rep(c("DD", "DR", "RD", "RR"), c(nrow(error_DD), nrow(error_DR), nrow(error_RD), nrow(error_RR)))
+
+ggplot(data = error)+
+  geom_point(aes(percentWhite, singleMoms, color = cl), alpha = 0.5, position = 'jitter')+
+  scale_x_continuous(name = "percent of white people")+
+  scale_y_continuous(name = "percent of single mothers")+
+  ggtitle("Percent of White & Single Mothers in Misclassificated Counties")
+```
+
+From the plot, different colors represent different results in particular counties. For example, the green color stands for "DR", which means that the correponding counties vote for democratic in 2012 and vote for republican in 2016. And these points represent counties where the predictions are different from the results. That is to say, the green points are the counties that actually belong to "DR", but are predicted to be in other classifications.
+  
+It shows that wrong predictions for counties which belong to "DR", tend to occur in places with lager percent of white people and smaller percent of single mothers. Therefore, we can say that the percent of white people and single mothers might have some influence on the voting changes. People in such places do not vote as expected.  
+  
+In addition, it cannot indicate some other connections since points of other colors are spread more randomly. 
+  
+After finishing the KNN predictor, we remove the unnecessary intermediate variables.
+```{r echo = codeInclude}
+rm(final1, final2, final3, test_1, test_2, test_3, train_1, train_2, train_3, preds_1, preds_2,preds_3, errorRates_1, errorRates_2, errorRates_3, truth_DD, truth_DR, truth_RD, truth_RR, error_DD, error_DR, error_RD, error_RR, error)
+```
+
+### Part 7: REFERENCES
+
+Brian Ripley, & William Venables (2015). class: Functions for Classification.
+https://cran.r-project.org/web/packages/class/index.html
+
+Erich Neuwirth (2014). RColorBrewer: ColorBrewer Palettes.
+https://cran.r-project.org/web/packages/RColorBrewer/index.html
+
+Hadley Wickham (2009). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York. https://cran.r-project.org/web/packages/ggplot2/citation.html
+  
+mnel. 2013. R Custom Legend for Multiple Layer GGPLOT. Retreived from http://stackoverflow.com/questions/18394391/r-custom-legend-for-multiple-layer-ggplot
+  
+R Core Team (2016). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+
+Richard A. Becker, Allan R. Wilks, Ray Brownrigg, Thomas P Minka, & Alex Deckmyn (2016). maps: Draw Geographical Maps.
+https://cran.r-project.org/web/packages/maps/index.html
+
+Terry Therneau, Beth Atkinson, & Brian Ripley (2015). rpart: Recursive Partitioning and Regression Trees.
+https://cran.r-project.org/web/packages/rpart/index.html
